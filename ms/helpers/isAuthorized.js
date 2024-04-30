@@ -39,4 +39,6 @@ async function isAuthorized(alertId, userId, requiredPermission) {
 }
 
 
+module.exports = isAuthorized;
+
 

@@ -8,7 +8,7 @@ const {
     deleteDataSource,
     getAllDataSources,
     getDataSource,
-    // testDataSource
+    testDataSource
 } = require('../controllers/datasource.controller');
 
 router.post('/', authenticateToken, createDataSource);
@@ -16,6 +16,7 @@ router.put('/:datasourceId', authenticateToken, updateDataSource);
 router.get('/', authenticateToken, getAllDataSources);
 router.get('/:datasourceId', authenticateToken, getDataSource);
 router.delete('/:datasourceId', authenticateToken, deleteDataSource);
+router.post('/test/:datasourceId', authenticateToken, testDataSource);
 
 
 module.exports = router;

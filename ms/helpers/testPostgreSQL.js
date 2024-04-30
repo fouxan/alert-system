@@ -20,3 +20,5 @@ async function testPostgreSQLConnection(dataSourceDetails) {
     return false;
   }
 }
+
+module.exports = testPostgreSQLConnection;

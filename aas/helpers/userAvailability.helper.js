@@ -2,8 +2,8 @@ const moment = require("moment-timezone");
 const User = require("../models/user.model");
 
 
-function isUserAvailable(userId) {
-    const user = User.findById(userId);
+const isUserAvailable = async (userId) => {
+    const user = await User.findById(userId);
     const currentTime = moment().tz(user.timezone);
     const currentDay = currentTime.format("dddd");
     const todaySchedule = user.availability.find(
@@ -19,4 +19,9 @@ function isUserAvailable(userId) {
     );
 }
 
-module.exports = { isUserAvailable };
+const getEmail = async (userId) => {
+    const user = await User.findById(userId);
+    return user.email;
+}
+
+module.exports = { isUserAvailable, getEmail };

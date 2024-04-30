@@ -140,24 +140,31 @@ exports.testDataSource = async (req, res) => {
     const { datasourceId } = req.params;
     const userId = req.user.id;
     try {
-        const dataSource = await DataSource.findById(datasourceId);
-        if (!dataSourceDetails) {
+
+        const dataSource = await DataSource.findOne({
+            userId: userId, 
+            datasources: { $elemMatch: { _id: datasourceId } }
+        }, { 'datasources.$': 1 });
+
+        if (!dataSource || !dataSource.datasources.length) {
             return res.status(404).json({ message: "DataSource not found" });
         }
 
+        const dataSourceDetails = dataSource.datasources[0];
+
         let connectionTestResult = false;
         switch (dataSourceDetails.type) {
-            case "MySQL":
+            case "mysql":
                 connectionTestResult = await testMySQLConnection(
                     dataSourceDetails
                 );
                 break;
-            case "PostgreSQL":
+            case "postgres":
                 connectionTestResult = await testPostgreSQLConnection(
                     dataSourceDetails
                 );
                 break;
-            case "BigQuery":
+            case "bigquery":
                 connectionTestResult = await testBigQueryConnection(
                     dataSourceDetails
                 );
@@ -170,6 +177,8 @@ exports.testDataSource = async (req, res) => {
 
         if (connectionTestResult) {
             res.json({ message: "Connection successful" });
+        }else{
+            res.status(400).json({ message: "Connection failed" });
         }
     } catch (error) {
         console.error("Error testing data source, connection failed:", error);

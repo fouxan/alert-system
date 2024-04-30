@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const resultSchema = new Schema({
     resultCategory: {
         type: String,
-        enum: ["un-attended", "snoozed", "acknowledged", "closed", "re-escalated"],
+        enum: ["snoozed", "acknowledged", "closed", "re-escalated"],
     },
     resultTime: Date,
     resultData: String,

@@ -14,7 +14,10 @@ const connection_string = process.env.MONGODB_URI;
 app.use(express.json());
 
 mongoose
-    .connect(connection_string)
+    .connect(connection_string, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+    })
     .then(() => console.log("Connected to MongoDB..."))
     .catch((err) => console.error("Could not connect to MongoDB...", err));
 
@@ -29,4 +32,6 @@ app.use('/datasources', datasourceRoutes);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log("Encryption Key: " , process.env.ENCRYPTION_KEY);
+    console.log("Signing Key: ", process.env.SIGNING_KEY);
 });

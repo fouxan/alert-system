@@ -17,3 +17,6 @@ async function testBigQueryConnection(dataSourceDetails) {
         return false;
     }
 }
+
+
+module.exports = testBigQueryConnection;

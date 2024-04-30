@@ -22,10 +22,10 @@ async function performBQQuery(dbSettings) {
         console.log(`Job ${job.id} started.`);
 
         const [rows] = await job.getQueryResults();
-        return rows;
+        return { queryResult: rows, queryStatus: "success" };
     } catch (error) {
         console.error("Error performing BigQuery query:", error);
-        throw error;
+        return { queryResult: error.message, queryStatus: "failed" };
     }
 }
 

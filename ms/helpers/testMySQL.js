@@ -10,9 +10,9 @@ async function testMySQLConnection(dataSourceDetails) {
             port: dataSourceDetails.port,
             ssl: dataSourceDetails.ssl
                 ? {
-                    rejectUnauthorized:
-                        dataSourceDetails.skipTlsVerify !== true,
-                }
+                      rejectUnauthorized:
+                          dataSourceDetails.skipTlsVerify !== true,
+                  }
                 : null,
         });
         await connection.query("SELECT 1");
@@ -24,4 +24,4 @@ async function testMySQLConnection(dataSourceDetails) {
     }
 }
 
-module.exports = { testMySQLConnection };
+module.exports = testMySQLConnection;

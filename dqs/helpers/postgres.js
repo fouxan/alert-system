@@ -21,10 +21,10 @@ async function performPGQuery(dbSettings) {
 
         const { rows } = await pool.query(dbSettings.query);
         await pool.end();
-        return rows;
+        return {queryResult: rows, queryStatus: "success"};
     } catch (error) {
         console.error("Error performing PostgreSQL query:", error);
-        throw error;
+        return { queryResult: error.message, queryStatus: "failed" };
     }
 }
 

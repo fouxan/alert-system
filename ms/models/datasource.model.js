@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-// const encrypt = require("mongoose-encryption");
+const encrypt = require("mongoose-encryption");
 
 const Schema = mongoose.Schema;
 
@@ -11,7 +11,7 @@ const dataSourceSchema = new mongoose.Schema(
                 type: {
                     type: String,
                     required: true,
-                    enum: ["MySQL", "PostgreSQL", "BigQuery"],
+                    enum: ["mysql", "postgres", "bigquery", "elasticsearch"],
                 },
                 name: { type: String, required: true },
                 description: String, // optional
@@ -24,7 +24,7 @@ const dataSourceSchema = new mongoose.Schema(
                     type: String,
                     required: function () {
                         return (
-                            this.type === "MySQL" || this.type === "PostgreSQL"
+                            this.type === "mysql" || this.type === "postgres"
                         );
                     },
                 },
@@ -34,7 +34,7 @@ const dataSourceSchema = new mongoose.Schema(
                     type: String,
                     required: function () {
                         return (
-                            this.type === "MySQL" || this.type === "PostgreSQL"
+                            this.type === "mysql" || this.type === "postgres"
                         );
                     },
                 },
@@ -42,7 +42,7 @@ const dataSourceSchema = new mongoose.Schema(
                     type: String,
                     required: function () {
                         return (
-                            this.type === "MySQL" || this.type === "PostgreSQL"
+                            this.type === "mysql" || this.type === "postgres"
                         );
                     },
                 },
@@ -52,8 +52,7 @@ const dataSourceSchema = new mongoose.Schema(
                     required: function () {
                         return (
                             this.ssl === true &&
-                            (this.type === "MySQL" ||
-                                this.type === "PostgreSQL")
+                            (this.type === "mysql" || this.type === "postgres")
                         );
                     },
                 }, // Optional, for PostgreSQL and MySQL
@@ -65,41 +64,42 @@ const dataSourceSchema = new mongoose.Schema(
                 projectId: {
                     type: String,
                     required: function () {
-                        return this.type === "BigQuery";
+                        return this.type === "bigquery";
                     },
                 },
                 privateKey: {
                     type: String,
                     required: function () {
-                        return this.type === "BigQuery";
+                        return this.type === "bigquery";
                     },
                 },
                 clientEmail: {
                     type: String,
                     required: function () {
-                        return this.type === "BigQuery";
+                        return this.type === "bigquery";
                     },
                 },
                 dataset: {
                     type: String,
                     required: function () {
-                        return this.type === "BigQuery";
+                        return this.type === "bigquery";
                     },
                 },
             },
+            { _id: true },
         ],
     },
     { timestamps: true }
 );
 
-// const encryptionKey = process.env.ENCRYPTION_KEY;
-// const signingKey = process.env.SIGNING_KEY;
+const encKey = process.env.ENCRYPTION_KEY;
+const signKey = process.env.SIGNING_KEY;
 
-// dataSourceSchema.plugin(encrypt, {
-//     encryptionKey,
-//     signingKey,
-//     encryptedFields: ["password", "privateKey"],
-// });
+dataSourceSchema.plugin(encrypt, {
+    encryptionKey: Buffer.from(encKey, "base64"),
+    signingKey: Buffer.from(signKey, "base64"),
+    encryptedFields: ["password", "privateKey"],
+});
 
 const DataSource = mongoose.model("DataSource", dataSourceSchema);
 

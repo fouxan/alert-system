@@ -48,7 +48,9 @@ const workspaceSchema = new Schema({
         default: () => Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
     },
     ESSettings: ESSettingsSchema,
-    deleteKey: Number
+    deleteKey: Number,
+    configFileCreated: { type: Boolean, default: false },
+    sendRetentionMail: { type: Boolean, default: false },
 });
 
 const Workspace = mongoose.model("Workspace", workspaceSchema);

@@ -43,6 +43,7 @@ const availabilitySchema = new Schema(
     { _id: false }
 );
 
+
 const userSchema = new Schema({
     username: { type: String, required: true },
     email: { type: String, required: true },
