@@ -4,6 +4,8 @@ services:
     image: mongo
     volumes:
       - alert_db_test:/data/db
+      - log_files:/app/log
+      - config_files:/app/data
     ports:
       - "27017:27017"
 
@@ -25,6 +27,11 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
 
+  kafka-admin:
+    build: ./kafka-admin
+    depends_on:
+      - kafka
+
   ms:
     build: ./ms
     ports:
@@ -43,7 +50,7 @@ services:
   ats:
     build: ./ats
     depends_on:
-      - kafka
+      - kafka-admin
       - mongodb
     environment:
       KAFKA_BROKER: "kafka:9092"
@@ -52,7 +59,7 @@ services:
   dqs:
     build: ./dqs
     depends_on:
-      - kafka
+      - kafka-admin
       - mongodb
     environment:
       KAFKA_BROKER: "kafka:9092"
@@ -63,14 +70,32 @@ services:
   aas:
     build: ./aas
     depends_on:
-      - kafka
+      - kafka-admin
       - mongodb
     environment:
       KAFKA_BROKER: "kafka:9092"
       MONGODB_URI: "mongodb+srv://fouzan:EGPmSVfHfoa1LUW7@trial-alert-system.fezsxkj.mongodb.net/?retryWrites=true&w=majority&appName=trial-alert-system"
 
+  ams:
+    build: ./ams
+    depends_on:
+      - kafka-admin
+      - mongodb
+    environment:
+      MONGODB_URI: "mongodb+srv://fouzan:EGPmSVfHfoa1LUW7@trial-alert-system.fezsxkj.mongodb.net/?retryWrites=true&w=majority&appName=trial-alert-system"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+
 volumes:
   alert_db_test:
+  log_files:
+  config_files:
 
 networks:
   default:

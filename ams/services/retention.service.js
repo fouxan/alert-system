@@ -1,11 +1,9 @@
 const Workspace = require("../models/workspace.model");
-const Alert = require("../models/alert.model");
 const User = require("../models/user.model");
-const fs = require("fs");
-const path = require("path");
 const { sendEmail } = require("./email.service");
+const { updateDataRetention } = require("./workspace.service");
+const { deleteLogFiles } = require("./file.service");
 
-const LOG_DIR = path.join(__dirname, "../logs"); // Directory for log files
 
 async function checkDataRetention() {
     const now = new Date();
@@ -21,6 +19,7 @@ async function checkDataRetention() {
     for (const workspace of workspaces) {
         if (workspace.dataRetention <= now) {
             deleteLogFiles(workspace._id.toString());
+            await updateDataRetention(workspace._id);
             console.log(
                 `Workspace ${workspace._id} data retention policy enforced.`
             );
@@ -36,7 +35,7 @@ async function checkDataRetention() {
                 .lean()
                 .then((user) => user.email);
             sendEmail({
-                to: creatorEmail,
+                email: creatorEmail,
                 subject: "Data Retention Reminder",
                 text: `Your data for workspace ${workspace.name} will be deleted in less than a week.`,
             });
@@ -45,23 +44,6 @@ async function checkDataRetention() {
             );
         }
     }
-}
-
-function deleteLogFiles(workspaceId) {
-    const logFile = path.join(LOG_DIR, `${workspaceId}-logs.log`);
-    const compressedLogFile = `${logFile}.gz`;
-
-    [logFile, compressedLogFile].forEach((file) => {
-        if (fs.existsSync(file)) {
-            fs.unlink(file, (err) => {
-                if (err) {
-                    console.error(`Error deleting file ${file}:`, err);
-                } else {
-                    console.log(`Deleted log file: ${file}`);
-                }
-            });
-        }
-    });
 }
 
 module.exports = { checkDataRetention };

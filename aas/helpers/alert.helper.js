@@ -1,10 +1,22 @@
 const Alert = require("../models/alert.model");
-const Team = require("../models/team.model");
-const { isUserAvailable } = require("./userAvailability.helper");
-const {getNextCheckTime} = require("./time.helper");
+const { getNextCheckTime } = require("./time.helper");
+const {convertToTimestamp} = require("./time.helper");
+
+function isMaintenanceWindow(nextCheckTime, action) {
+    const endTime = convertToTimestamp(action.timeConstraints.end);
+    const startTime = convertToTimestamp(action.timeConstraints.start);
+    return { isMaintenanceWindow: nextCheckTime >= startTime && nextCheckTime <= endTime, end: endTime };
+}
+
+function isThrottled(nextCheckTime, triggerOptions) {
+    if (!triggerOptions.throttle) return false;
+    const throttleEndTime =
+        new Date().getTime() + triggerOptions.triggerSuppressTime; // assuming triggerSuppressTime is in milliseconds
+    return {isThrottled: nextCheckTime < throttleEndTime, end: throttleEndTime};
+}
 
 
-// shoudl work
+
 const isActionNeeded = async ({ alertId, result }) => {
     const alert = await Alert.findById(alertId).lean();
     const conditions = alert.conditions;
@@ -24,8 +36,6 @@ const isActionNeeded = async ({ alertId, result }) => {
     return { actionNeeded, triggerCount, type };
 };
 
-
-// shoudl work
 const updateNextCheckTime = async ({ alertId }) => {
     try {
         const nextCheckTime = await getNextCheckTime({ alertId });
@@ -41,59 +51,8 @@ const updateNextCheckTime = async ({ alertId }) => {
     } catch (error) {
         console.error("Error updating next check time:", error);
     }
-}
-
-
-// shoudl work
-const getUserList = async ({ alertId }) => {
-    const alert = await Alert.findById(alertId).lean();
-    if(!alert){
-        throw new Error("Alert not found");
-    }
-    const userList = new Set();
-    const userEmails = new Set();
-
-    const userAvailabilityChecks = alert.subscribedUsers.map(async (subscription) => {
-        if (await isUserAvailable(subscription.userId)) {
-            userList.add(user.userId);
-            userEmailList.set(subscription.userId.toString(), email);
-        }
-    });
-    await Promise.all(userAvailabilityChecks); // parallel processing
-
-    const teamMemberChecks = alert.assignedTeams.map(async (team) => {
-        const teamDetails = await Team.findById(team.teamId).lean();
-        return Promise.all(
-            teamDetails.members.map(async (member) => {
-                if (await isUserAvailable(member.userId)) {
-                    const email = await getEmail(member.userId);
-                    userList.add(member.userId);
-                    userEmailList.set(member.userId.toString(), email);
-                }
-            })
-        );
-    });
-    await Promise.all(teamMemberChecks);
-
-    const assignedUserChecks = alert.assignedUsers.map(async (assignedUser) => {
-        if (await isUserAvailable(assignedUser.userId)) {
-            const email = await getEmail(assignedUser.userId);
-            userList.add(assignedUser.userId);
-            userEmailList.set(assignedUser.userId.toString(), email);
-        }
-    });
-    await Promise.all(assignedUserChecks);
-
-    const userDetailList = Array.from(userList).map(userId => ({
-        id: userId,
-        email: userEmailList.get(userId.toString())
-    }));
-
-    console.log("User Detail List: ", userDetailList);
-    return userDetailList;
 };
 
-// shoudl work
 const updateQueryExecStatus = async (alertId, status) => {
     try {
         const alert = await Alert.findOneAndUpdate(
@@ -116,8 +75,31 @@ const getActionDetails = async (alertId) => {
         throw new Error("Alert not found");
     }
     return alert.action;
-}
+};
 
+const alertExecutionPaused = async (alertId) => {
+    const alert = await Alert.findById(alertId).lean();
+    if (!alert) {
+        throw new Error("Alert not found");
+    }
+    return alert.queryExecStatus === "paused";
+};
 
+const getAlertName = async (alertId) => {
+    const alert = await Alert.findById(alertId).lean();
+    if (!alert) {
+        throw new Error("Alert not found");
+    }
+    return alert.name;
+};
 
-module.exports = {getNextCheckTime, updateNextCheckTime, updateQueryExecStatus, isActionNeeded, getUserList, takeAction, getActionDetails}
+module.exports = {
+    getAlertName,
+    alertExecutionPaused,
+    updateNextCheckTime,
+    updateQueryExecStatus,
+    isActionNeeded,
+    getActionDetails,
+    isMaintenanceWindow,
+    isThrottled
+};

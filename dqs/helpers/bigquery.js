@@ -25,7 +25,7 @@ async function performBQQuery(dbSettings) {
         return { queryResult: rows, queryStatus: "success" };
     } catch (error) {
         console.error("Error performing BigQuery query:", error);
-        return { queryResult: error.message, queryStatus: "failed" };
+        throw error;
     }
 }
 

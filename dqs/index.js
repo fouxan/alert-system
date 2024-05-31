@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { connectDB } = require("./services/db.service");
+const { connectDB } = require("./config/db.config");
 const { initProducer, initConsumer } = require("./services/kakfa.service");
 const { processMessage } = require("./controllers/message.controller");
 

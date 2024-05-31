@@ -29,7 +29,7 @@ async function performElasticSearchQuery(dbSettings) {
         return { queryResult: body.hits.hits, queryStatus: "success" };
     } catch (error) {
         console.error("Error performing ElasticSearch query:", error);
-        return { queryResult: error.message, queryStatus: "failed" };
+        throw error;
     }
 }
 

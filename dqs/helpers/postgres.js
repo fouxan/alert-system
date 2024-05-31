@@ -24,7 +24,7 @@ async function performPGQuery(dbSettings) {
         return {queryResult: rows, queryStatus: "success"};
     } catch (error) {
         console.error("Error performing PostgreSQL query:", error);
-        return { queryResult: error.message, queryStatus: "failed" };
+        throw error;
     }
 }
 

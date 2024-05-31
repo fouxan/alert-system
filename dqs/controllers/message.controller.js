@@ -22,6 +22,17 @@ const processMessage = async ({ message, producer, partition }) => {
     const { alertId, dbSettings, actionType } = JSON.parse(
         message.value.toString()
     );
+    if(actionType === "updateNextCheckTime"){
+        await producer.send({
+            topic: "results",
+            messages: [{ value: JSON.stringify({ alertId, result: {
+                queryResults: "updateNextCheckTime",
+                queryStatus: "paused",
+            } }) }],
+            AASPartition: mapActionTypeToPartition(actionType),
+        });
+        return;
+    }
     console.log(`Processing message for Alert ID: ${alertId}`);
     const AASPartition = mapActionTypeToPartition(actionType);
     let result;
@@ -58,7 +69,7 @@ const processMessage = async ({ message, producer, partition }) => {
                 {
                     value: JSON.stringify({
                         alertId,
-                        result: { error: error.message, stack: error.stack },
+                        result: { queryStatus: "failed", queryResults: error },
                     }),
                 },
             ],

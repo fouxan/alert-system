@@ -5,4 +5,5 @@ const kafka = new Kafka({
     brokers: [process.env.KAFKA_BROKER],
 });
 
+
 module.exports = { kafka };

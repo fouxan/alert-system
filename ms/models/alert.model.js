@@ -24,7 +24,7 @@ const scheduleSchema = new Schema(
         },
         realTimes: [
             // has to be the msSinceMidnight
-            { day: Number, time: Number}, // {1, 43200000} means 12:00 PM on a monday
+            { day: Number, time: Number }, // {1, 43200000} means 12:00 PM on a monday
         ],
         expiry: { type: Date }, // None or timestamp
     },
@@ -112,7 +112,7 @@ const actionSchema = new Schema(
             },
             webhook: {
                 url: String,
-                message: Stringla
+                message: Stringla,
             },
         },
         timeConstraints: [{ day: String, start: Date, end: Date }], // has to be the msSinceMidnight
@@ -135,22 +135,6 @@ const actionSchema = new Schema(
         ],
     },
     { timestamps: true, _id: false }
-);
-
-const actionsSchema = new Schema (
-    [{
-        resultId: { type: String, required: true },
-        actionTaken: { type: String, required: true, enum: ["acknowledged", "snoozed", "closed", "re-escalated", "none"], default: "none" },
-        actionTime: { type: Date, default: Date.now },
-        actionBy: { type: Schema.Types.ObjectId, ref: "User" },
-        status: { type: String, enum: ["pending", "completed"], default: "pending" },
-        actionNotes: [{
-            note: { type: String, required: true },
-            noteTime: { type: Date, default: Date.now },
-            noteBy: { type: Schema.Types.ObjectId, ref: "User" },
-        }]
-    }],
-    { _id: false }
 );
 
 const subscriptionSchema = new Schema(
@@ -224,7 +208,6 @@ const alertSchema = new Schema({
                 enum: ["running", "incomplete", "expired", "paused"],
                 default: "incomplete",
             },
-            actions: actionsSchema,
             deleteKey: Number,
             lastCheckTime: Date,
             queryExecStatus: {

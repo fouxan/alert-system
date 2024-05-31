@@ -1,38 +1,65 @@
 const fs = require('fs');
-const zlib = require('zlib');
 const path = require('path');
+const zlib = require('zlib');
 
-//TODO: Adjust directory as necessary
-const LOG_DIR = path.join(__dirname, '../logs'); // Adjust directory as necessary
-const MAX_FILE_SIZE = 5 * 1024 * 1024; //5MB
+const LOG_DIR = '/app/log';
+const FILE_SIZE_LIMIT = 1; // in MB
 
-function compressLogFile(filePath) {
+const compressLogFile = (workspaceId) => {
+    const logFilePath = path.join(LOG_DIR, `${workspaceId}-logs.log`);
+    const compressedFilePath = `${logFilePath}.gz`;
+
+    const readStream = fs.createReadStream(logFilePath);
+    const writeStream = fs.createWriteStream(compressedFilePath);
     const gzip = zlib.createGzip();
-    const source = fs.createReadStream(filePath);
-    const destination = fs.createWriteStream(`${filePath}.gz`);
-    
-    source.pipe(gzip).pipe(destination).on('finish', () => {
-        console.log(`Compressed log file: ${filePath}`);
-        fs.unlinkSync(filePath);
-    });
-}
 
-function checkLogFiles() {
-    fs.readdir(LOG_DIR, (err, files) => {
+    readStream.pipe(gzip).pipe(writeStream).on('finish', (err) => {
         if (err) {
-            console.error('Failed to read log directory:', err);
+            console.error('Error compressing log file:', err);
+        } else {
+            console.log(`Log file compressed for workspace ${workspaceId}`);
+            fs.unlinkSync(logFilePath); // Remove original log file
+        }
+    });
+};
+
+const checkAndCompressLogFile = (workspaceId) => {
+    const logFilePath = path.join(LOG_DIR, `${workspaceId}-logs.log`);
+    fs.stat(logFilePath, (err, stats) => {
+        if (err) {
+            console.error(`Error getting stats for file ${logFilePath}:`, err);
             return;
         }
-        
-        files.forEach(file => {
-            const filePath = path.join(LOG_DIR, file);
-            const stats = fs.statSync(filePath);
-            
-            if (stats.size >= MAX_FILE_SIZE) {
-                compressLogFile(filePath);
-            }
-        });
+
+        const fileSizeInBytes = stats.size;
+
+        if (fileSizeInBytes > FILE_SIZE_LIMIT) {
+            compressLogFile(workspaceId);
+        }
+    });
+};
+
+const createLogFile = (workspaceId) => {
+    const logFilePath = path.join(LOG_DIR, `${workspaceId}-logs.log`);
+    fs.writeFileSync(logFilePath, '');
+    console.log(`Log file created for workspace ${workspaceId}`);
+};
+
+function deleteLogFiles(workspaceId) {
+    const logFile = path.join(LOG_DIR, `${workspaceId}-logs.log`);
+    const compressedLogFile = `${logFile}.gz`;
+
+    [logFile, compressedLogFile].forEach((file) => {
+        if (fs.existsSync(file)) {
+            fs.unlink(file, (err) => {
+                if (err) {
+                    console.error(`Error deleting file ${file}:`, err);
+                } else {
+                    console.log(`Deleted log file: ${file}`);
+                }
+            });
+        }
     });
 }
 
-module.exports = { checkLogFiles, compressLogFile };
+module.exports = { checkAndCompressLogFile, createLogFile, deleteLogFiles };

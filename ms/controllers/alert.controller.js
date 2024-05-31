@@ -28,16 +28,16 @@ exports.createAlert = async (req, res) => {
         const workspaceId = folder.folders[0].workspaceId;
 
         const alertId = new mongoose.Types.ObjectId();
-        const isComplete = isAlertComplete(alertData); // Ensure you have implemented this function
+        const isComplete = isAlertComplete(alertData);
         console.log(isComplete);
 
         const newAlert = {
             _id: alertId,
             ...alertData,
-            workspaceId: workspaceId, // Set workspaceId from the folder
+            workspaceId: workspaceId,
             status: isComplete ? "running" : "incomplete",
             userId: userId,
-            folderId: folderId, // Ensure folderId is provided in the alertData if it's required
+            folderId: folderId,
             nextCheckTime: isComplete ? new Date() : undefined, // Set the nextCheckTime accordingly
         };
 
@@ -645,8 +645,235 @@ exports.unsubscribeFromAlert = async (req, res) => {
     }
 };
 
+// ------------------------------------------------------------------------------------------------------------
+// Result functions.
+
+// TODO: Test these and alert action results
+exports.getAlertResults = async (req, res) => {
+    const { alertId } = req.params;
+    const userId = req.user.id;
+
+    if (!await isAuthorized(alertId, userId, "viewer")) {
+        return res.status(403).json({ message: 'Unauthorized access to alert results.' });
+    }
+
+    try {
+        const results = await ActionResult.find({ alert_id: alertId });
+        res.status(200).json(results);
+    } catch (error) {
+        console.error('Error fetching alert results:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.getAlertResult = async (req, res) => {
+    const { alertId, resultId } = req.params;
+    const userId = req.user.id;
+
+    if (!await isAuthorized(alertId, userId, "viewer")) {
+        return res.status(403).json({ message: 'Unauthorized access to alert result.' });
+    }
+
+    try {
+        const result = await ActionResult.findOne({ alert_id: alertId, 'results._id': resultId });
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching alert result:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.addNote = async (req, res) => {
+    const { alertId, resultId } = req.params;
+    const { note } = req.body;
+    const userId = req.user.id;
+
+    if (!await isAuthorized(alertId, userId, "editor")) {
+        return res.status(403).json({ message: 'Unauthorized to add note.' });
+    }
+
+    try {
+        const actionResult = await ActionResult.findOne({ alert_id: alertId });
+        const result = actionResult.results.id(resultId);
+        if (!result) {
+            return res.status(404).json({ message: 'Result not found.' });
+        }
+
+        result.actionNotes.push({
+            note: note,
+            noteBy: req.user._id
+        });
+
+        await actionResult.save();
+        res.status(201).json({ message: 'Note added successfully.', result: result });
+    } catch (error) {
+        console.error('Error adding note:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.getNotes = async (req, res) => {
+    const { alertId, resultId } = req.params;
+    const userId = req.user.id;
+
+    if (!await isAuthorized(alertId, userId, "viewer")) {
+        return res.status(403).json({ message: 'Unauthorized access to notes.' });
+    }
+
+    try {
+        const actionResult = await ActionResult.findOne({ alert_id: alertId });
+        const result = actionResult.results.id(resultId);
+        if (!result) {
+            return res.status(404).json({ message: 'Result not found.' });
+        }
+
+        res.status(200).json(result.actionNotes);
+    } catch (error) {
+        console.error('Error fetching notes:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.getNote = async (req, res) => {
+    const { alertId, resultId, noteId } = req.params;
+    const userId = req.user.id;
+
+    if (!await isAuthorized(alertId, userId, "viewer")) {
+        return res.status(403).json({ message: 'Unauthorized access to note.' });
+    }
+
+    try {
+        const actionResult = await ActionResult.findOne({ alert_id: alertId });
+        const result = actionResult.results.id(resultId);
+        const note = result.actionNotes.id(noteId);
+
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found.' });
+        }
+
+        res.status(200).json(note);
+    } catch (error) {
+        console.error('Error fetching note:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.updateNote = async (req, res) => {
+    const { alertId, resultId, noteId } = req.params;
+    const userId = req.user.id;
+    const { note } = req.body;
+
+    if (!await isAuthorized(alertId, userId, "editor")) {
+        return res.status(403).json({ message: 'Unauthorized to update note.' });
+    }
+
+    try {
+        const actionResult = await ActionResult.findOne({ alert_id: alertId });
+        const result = actionResult.results.id(resultId);
+        const noteToUpdate = result.actionNotes.id(noteId);
+
+        if (!noteToUpdate) {
+            return res.status(404).json({ message: 'Note not found.' });
+        }
+
+        noteToUpdate.note = note;
+        await actionResult.save();
+
+        res.status(200).json({ message: 'Note updated successfully.', note: noteToUpdate });
+    } catch (error) {
+        console.error('Error updating note:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.deleteNote = async (req, res) => {
+    const { alertId, resultId, noteId } = req.params;
+    const userId = req.user.id;
+
+    if (!await isAuthorized(alertId, userId, "editor")) {
+        return res.status(403).json({ message: 'Unauthorized to delete note.' });
+    }
+
+    try {
+        const actionResult = await ActionResult.updateOne(
+            { alert_id: alertId, 'results._id': resultId },
+            { $pull: { 'results.$.actionNotes': { _id: noteId } } }
+        );
+
+        if (actionResult.modifiedCount === 0) {
+            return res.status(404).json({ message: 'Note not found or could not be deleted.' });
+        }
+
+        res.status(200).json({ message: 'Note deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting note:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.takeActionOnResult = async (req, res) => {
+    const { alertId, resultId } = req.params;
+    const userId = req.user.id;
+    const { action, notes } = req.body;
+
+    if (!await isAuthorized(alertId, userId, "editor")) {
+        return res.status(403).json({ message: 'Unauthorized to take action.' });
+    }
+
+    try {
+        const actionResult = await ActionResult.findOne({ alert_id: alertId });
+        const result = actionResult.results.id(resultId);
+        if (!result) {
+            return res.status(404).json({ message: 'Result not found.' });
+        }
+
+        result.actionTaken = action;
+        result.status = action === 're-escalated' ? 'pending' : 'completed';
+        result.actionBy = userId;
+
+        if (notes) {
+            result.actionNotes.push({
+                note: notes,
+                noteBy: userId
+            });
+        }
+
+        await actionResult.save();
+        res.status(200).json({ message: 'Action taken successfully.', result: result });
+    } catch (error) {
+        console.error('Error taking action on result:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // TODO: Test these and version history
-exports.pauseExecution = async (req, res) => {};
+exports.pauseExecution = async (req, res) => {
+    const userId = req.user.id;
+    const { alertId } = req.params;
+
+    try {
+        if (!(await isAuthorized(alertId, userId, "editor"))) {
+            return res
+                .status(403)
+                .json({ message: "Not authorized to pause this alert's execution." });
+        }
+
+        const updateResult = await Alert.updateOne(
+            { "alerts._id": alertId },
+            { $set: { "alerts.$.queryExecStatus": "paused" } }
+        );
+
+        console.log(updateResult);
+        if (updateResult.matchedCount === 0) {
+            return res.status(404).json({ error: "Alert not found" });
+        }
+
+        res.json({ message: "Alert execution paused successfully" });
+    } catch (error) {
+        console.error("Error pausing alert execution:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
 
 exports.getVersions = async (req, res) => {
     const { alertId } = req.params;

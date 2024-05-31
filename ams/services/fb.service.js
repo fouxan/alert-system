@@ -2,37 +2,36 @@ const fs = require("fs");
 const path = require("path");
 const Workspace = require("../models/workspace.model");
 
-//TODO: Adjust directory as necessary
-const CONFIG_DIR = "/path/to/docker/volume/fb_config_files";
+const CONFIG_DIR = '/app/data';
 
 // Utility to create a Fluent Bit configuration file
-function createConfigFile(workspaceId, settings) {
-    const configPath = path.join(CONFIG_DIR, `${workspaceId}-config.conf`);
+function createConfigFile(settings) {
+    const configPath = path.join(CONFIG_DIR, `${settings.workspaceId}-config.conf`);
     const content = generateConfigContent(settings);
 
     fs.writeFile(configPath, content, (err) => {
         if (err) {
             console.error(
-                `Failed to write Fluent Bit config file for workspace ${workspaceId}:`,
+                `Failed to write Fluent Bit config file for workspace ${settings.workspaceId}:`,
                 err
             );
         } else {
             console.log(
-                `Fluent Bit config file created/updated for workspace ${workspaceId}`
+                `Fluent Bit config file created/updated for workspace ${settings.workspaceId}`
             );
             Workspace.findByIdAndUpdate(
-                workspaceId,
+                settings.workspaceId,
                 { $set: { configFileCreated: true } },
                 { new: true },
                 (err, doc) => {
                     if (err) {
                         console.error(
-                            `Failed to update config file status in DB for workspace ${workspaceId}:`,
+                            `Failed to update config file status in DB for workspace ${settings.workspaceId}:`,
                             err
                         );
                     } else {
                         console.log(
-                            `Config file creation status updated in DB for workspace ${workspaceId}`
+                            `Config file creation status updated in DB for workspace ${settings.workspaceId}`
                         );
                     }
                 }
@@ -45,21 +44,23 @@ function createConfigFile(workspaceId, settings) {
 function generateConfigContent(settings) {
     return `
 [SERVICE]
-    Flush        1
+    Flush        5
     Daemon       Off
     Log_Level    info
 
 [INPUT]
     Name        tail
-    Path        /path/to/logs/${settings.workspaceId}.log
+    Path        /var/log/fluentbit/${settings.workspaceId}-logs.log
+    Parser      json
+    Tag         workspace-${settings.workspaceId}
 
 [OUTPUT]
     Name        es
-    Match       *
+    Match       ${settings.workspaceId}.logs
     Host        ${settings.host}
     Port        ${settings.port}
-    Index       ${settings.workspaceId}
-    Type        log
+    Index       ${settings.esIndex}
+    Type        _doc
     HTTP_User   ${settings.username || ""}
     HTTP_Passwd ${settings.password || ""}
     tls         On
@@ -75,11 +76,12 @@ async function handleConfigFiles(workspaceId) {
             throw new Error(`Workspace ${workspaceId} not found`);
         }
 
-        createConfigFile(workspaceId, {
+        createConfigFile({
             host: workspace.ESSettings.host,
             port: workspace.ESSettings.port,
             username: workspace.ESSettings.username,
             password: workspace.ESSettings.password,
+            esIndex: workspace.ESSettings.index,
             workspaceId: workspace._id.toString(),
             skipTlsVerify: workspace.ESSettings.skipTlsVerify,
         });

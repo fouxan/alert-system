@@ -4,12 +4,16 @@ async function storeActionResult(alertId, resultData) {
     try {
         let actionResult = await ActionResult.findOne({ alert_id: alertId });
 
+        const resultEntry = {
+            resultData: resultData,
+        };
+
         if (actionResult) {
-            actionResult.results.push(resultData);
+            actionResult.results.push(resultEntry);
         } else {
             actionResult = new ActionResult({
                 alert_id: alertId,
-                results: [resultData],
+                results: [resultEntry],
             });
         }
 
@@ -19,5 +23,6 @@ async function storeActionResult(alertId, resultData) {
         console.error("Error storing ActionResult:", error);
     }
 }
+
 
 module.exports = storeActionResult;
