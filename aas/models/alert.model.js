@@ -112,7 +112,7 @@ const actionSchema = new Schema(
             },
             webhook: {
                 url: String,
-                message: Stringla,
+                message: String,
             },
         },
         timeConstraints: [{ day: String, start: Date, end: Date }], // has to be the msSinceMidnight

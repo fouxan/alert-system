@@ -17,18 +17,14 @@ const scheduleSchema = new Schema(
             enum: ["scheduled", "realtime"],
         },
         frequency: {
-            type: String,
+            type: Number, // in milliseconds eg every 2 days = 172800000
             required: function () {
                 return this.scheduleType === "scheduled";
             },
         },
         realTimes: [
-            {
-                type: Date,
-                required: function () {
-                    return this.scheduleType === "realtime";
-                },
-            },
+            // has to be the msSinceMidnight
+            { day: Number, time: Number }, // {1, 43200000} means 12:00 PM on a monday
         ],
         expiry: { type: Date }, // None or timestamp
     },
@@ -47,17 +43,9 @@ const conditionSchema = new Schema(
         triggerOptions: {
             throttle: Boolean,
             triggerSuppressTime: {
-                time: {
-                    type: Number,
-                    required: function () {
-                        return this.throttle;
-                    },
-                },
-                unit: {
-                    type: String,
-                    required: function () {
-                        return this.throttle;
-                    },
+                type: Number, // has to be milliseconds to stop eg. if 30 mins then 1800000
+                required: function () {
+                    return this.throttle;
                 },
             },
         },
@@ -103,14 +91,10 @@ const actionSchema = new Schema(
                     linkToResults: { type: Boolean, default: false },
                     attachCsv: { type: Boolean, default: false },
                     attachPdf: { type: Boolean, default: false },
-                    searchString: { type: Boolean, default: false },
-                    triggerCondition: { type: Boolean, default: false },
-                    triggerTime: { type: Boolean, default: false },
-                    inline: { type: Boolean, default: false },
-                    allowEmptyAttachment: { type: Boolean, default: false },
                 },
             },
             slack: {
+                token: String,
                 channel: String,
                 message: String,
                 attachment: String,
@@ -128,9 +112,10 @@ const actionSchema = new Schema(
             },
             webhook: {
                 url: String,
+                message: String,
             },
         },
-        timeConstraints: [{ day: String, start: Date, end: Date }],
+        timeConstraints: [{ day: String, start: Date, end: Date }], // has to be the msSinceMidnight
         showAlertInStatusPage: {
             type: Boolean,
             default: true,
@@ -174,19 +159,24 @@ const subscriptionSchema = new Schema(
     { timestamps: true, _id: false }
 );
 
-const assignedUserSchema = new Schema({
-    userId: { type: Schema.Types.ObjectId, ref: "User" },
-    permissions: {
-        type: String,
-        enum: ["editor", "viewer"],
-        default: "editor",
+const assignedUserSchema = new Schema(
+    {
+        userId: { type: Schema.Types.ObjectId, ref: "User" },
+        permissions: {
+            type: String,
+            enum: ["editor", "viewer"],
+            default: "editor",
+        },
     },
-}, { _id: false });
+    { _id: false }
+);
 
-const assignedTeamSchema = new Schema({
-    teamId: { type: Schema.Types.ObjectId, ref: "Team" },
-}, { _id: false });
-
+const assignedTeamSchema = new Schema(
+    {
+        teamId: { type: Schema.Types.ObjectId, ref: "Team" },
+    },
+    { _id: false }
+);
 
 const alertSchema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -218,8 +208,13 @@ const alertSchema = new Schema({
                 enum: ["running", "incomplete", "expired", "paused"],
                 default: "incomplete",
             },
+            deleteKey: Number,
             lastCheckTime: Date,
-            queryExecStatus: {type: String, enum: ['pending', 'running', 'completed', 'failed', 'paused'], default: "pending"},
+            queryExecStatus: {
+                type: String,
+                enum: ["pending", "running", "completed", "failed", "paused"],
+                default: "pending",
+            },
             createdAt: { type: Date, default: Date.now },
             updatedAt: { type: Date, default: Date.now },
             assignedUsers: [assignedUserSchema],

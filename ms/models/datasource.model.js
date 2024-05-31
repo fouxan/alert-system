@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const encrypt = require("mongoose-encryption");
-
 const Schema = mongoose.Schema;
 
 const dataSourceSchema = new mongoose.Schema(
