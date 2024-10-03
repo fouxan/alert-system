@@ -1,27 +1,23 @@
 const { Pool } = require("pg");
-const DataSource = require("../models/datasource.model");
 
 async function performPGQuery(dbSettings) {
     try {
-        const dataSource = await DataSource.findById(dbSettings.dbId);
-        if (!dataSource) throw new Error("Data source not found");
-
         const pool = new Pool({
-            user: dataSource.user,
-            host: dataSource.host,
-            database: dataSource.databaseName,
-            password: dataSource.password,
-            port: dataSource.port,
-            ssl: dataSource.ssl
-                ? { rejectUnauthorized: !dataSource.skipTlsVerify,}
+            user: dbSettings.user,
+            host: dbSettings.host,
+            database: dbSettings.databaseName,
+            password: dbSettings.password,
+            port: dbSettings.port,
+            ssl: dbSettings.ssl
+                ? { rejectUnauthorized: !dbSettings.skipTlsVerify }
                 : false,
-            connectionTimeoutMillis: dataSource.executionTimeout,
-            max: dataSource.connectionLimit || 10,
+            connectionTimeoutMillis: dbSettings.executionTimeout,
+            max: dbSettings.connectionLimit || 10,
         });
 
         const { rows } = await pool.query(dbSettings.query);
         await pool.end();
-        return {queryResult: rows, queryStatus: "success"};
+        return { queryResult: rows, queryStatus: "success" };
     } catch (error) {
         console.error("Error performing PostgreSQL query:", error);
         throw error;

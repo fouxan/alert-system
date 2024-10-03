@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "plasma-geode-419514",
+  "private_key_id": "64e13b0e7aad469b34d5132f80d53ef8af6ee043",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC1Xci1NJJ9sZdj\n/C86DSfjxgIFdRQ/qFfWhZolW3YVrcEhgrSJPcTON2in4IbSrBuiNX7OsWgsBX8t\n7JzoWHdeFgw195ZEIBzX3gZav4gPAc0P4WWkBApzCfZp9fXTGyP9wz26r91tDQmZ\n4YulrCai0hE72zndT8JOj4QKb44J6o56XuYU17ziczc88XBGBpxxVppQWRxYdNoK\nEBRcYvu7LqeAxg5ZZQ78GWqAIGQ+THxxa9CxnYCEJaKGkeEFv9JZ5end/0HghT+x\nPmxuX9VmtkIWc/ZdVxkQlv+dmlSCZfOuA3+PNfx9tOtSjcxpvWtaX69dkapmbKtR\niQTRXB+FAgMBAAECggEABkYPOk1uP9DT1s6TZ6Oq3JMt4LhzEdyl5TLL6TznscpH\n4vvdeN3dH/EEusHmiAUSE6NcFpRGcTdjddg4eUUOJAAJPhipZwPhW4o/mAYGE9bR\nHBqE5I6LOf1/O50Zesr2jMGjMgEBXNNVoLAPn5R75af0lqh3sPMgWo1WWPIQ7MDU\nW2Tb6UYKZx5J+eJHW5O7k4cRXTjj/rMtRgZjyufkRE6I57lKUH3QX1BEtWg8wDXP\njxBhIV2s8xaZYOW0TF0ibRT6GwfKNuh9yLMvviRZG093C5ws87BNjtYVaACwOiFC\nwSqC2+MDVIt7ROJAkF/IRKDcAEo+3pIZs5Zb8/ZfZQKBgQDwliEqyH8ZaU0Tg8v9\nxXC+tLxVxw4wtfYB5FnUeV8wtKHH4lYUFtCgyoFS8FLVOVvYByilpjIuZiW0CVUI\n2ei0mSNV/uNxFUMJsjUgGG+GECEuSIbOLQCaOupZfl9jm0JS/+SQ0iHJz799R+CI\nOU0s7ktlSZOgF55tZJIHwpYlxwKBgQDA/GHyKiKyeWjeB3y17z3EhnBiip51yakx\nrHgMeQOpIDThn1GYt8fwfolL4ee9RJDohdKsXzst5SL/mQH9FwNoCGvxfDLTFikt\nKqDn6J4Sn5R4+fEop+VuGyna2RfokSYDGijd+xbFTjhNXYEs2yQsTtFBBvpont9g\nLVMv1mMgUwKBgQDe3dQfs9e5jIhv+XlwvgPxRa/prhoBGa6olgZ5A24gylPLvGmM\n9o2RRcaDNEknaJkiB4+p08lMnidzHen95w7grbPEJ/g9ezq8sq7v6nL1N9/k5h6q\nw5l5RfZtrNlkhiDsjkwHtADE2IRE496lkp9hbeW+EGiGtxp1r+Ju+dzpZQKBgBeX\nAjYC1ojwdFQnoCPxIaDDOjuhbCtDwk3TIj2MEVl8GVq3CddcJ7GLFidTbutg1UHH\nEfCGF4rNppCN2INia8Usul0jbGcHH3No8ZBHjAMExLZg/wyUMWRbJ6ubu+Nu0rGw\nYex4g9kMba9vTZn5E5vi6otDWhqtyOpNwAxp7WYHAoGASXoc0Xlpy4vlm2VTJ6G4\nALY1OMoCLeIgKlfApjBlk7rDxFj8eORmTCfUOvXcRx4Ag3wj4CIC1qx+CqB5cz7U\n5hlXimL+CRhC64HG7DtKMcNNLp/6FozGkvrOawuIJBQ2sGllYr0Vb66I7Z2RmU2Q\nZQQnRY6RvrUkdal8IiYzOrQ=\n-----END PRIVATE KEY-----\n",
+  "client_email": "bigquery-test@plasma-geode-419514.iam.gserviceaccount.com",
+  "client_id": "105645347673288139725",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/bigquery-test%40plasma-geode-419514.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

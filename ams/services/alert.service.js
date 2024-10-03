@@ -12,7 +12,7 @@ const updateExpiredAlerts = async () => {
                 $set: { 'alerts.$.status': 'expired' }
             }
         );
-        console.log(`${result.nModified} alerts were updated to expired.`);
+        console.log(`${result.modifiedCount} alerts were updated to expired.`);
     } catch (error) {
         console.error("Error updating expired alerts:", error);
     }

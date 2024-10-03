@@ -1,9 +1,11 @@
 const { Kafka } = require("kafkajs");
 
 const kafka = new Kafka({
-    clientId: "ats-client",
-    brokers: [process.env.KAFKA_BROKER]
+  clientId: "ats-client",
+  brokers: [process.env.KAFKA_BROKER],
 });
 
-module.exports = { kafka };
+const producer = kafka.producer();
+const consumer = kafka.consumer({ groupId: "ats-group" });
 
+module.exports = { kafka, producer, consumer };

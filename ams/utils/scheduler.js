@@ -1,23 +1,28 @@
-const cron = require('node-cron');
-const { checkDataRetention } = require('../services/retention.service');
-const { updateExpiredAlerts } = require('../services/alert.service'); // Assume you have this service
-const Workspace = require('../models/workspace.model');
-const { checkAndCompressLogFile } = require('../services/file.service');
-const { handleConfigFiles } = require('../services/fb.service');
+const cron = require("node-cron");
+const { checkDataRetention } = require("../services/retention.service");
+const { checkAndCompressLogFile } = require("../services/logfile.service");
+const { updateExpiredAlerts } = require("../services/alert.service");
+const Workflow = require("../models/workflow.model");
+const Alert = require("../models/alert.model");
 
 const scheduleTasks = () => {
-    cron.schedule('0 0 * * *', () => { // Run daily at midnight
-        console.log('Running scheduled tasks...');
-        checkDataRetention();
+    cron.schedule("0 * * * *", async () => {
+        // Run every hour
+        console.log("Running scheduled tasks...");
+        await updateExpiredAlerts();
+        await checkDataRetention();
     });
 
-    cron.schedule('* * * * *', async () => { // Run every minute
-        console.log('Checking log files for compression...');
-        const workspaces = await Workspace.find({});
-        workspaces.forEach(workspace => {
-            handleConfigFiles(workspace._id);
-            updateExpiredAlerts();
-            checkAndCompressLogFile(workspace._id);
+    cron.schedule("*/5 * * * *", async () => {
+        // Run every 5 minutes
+        console.log("Checking log files for compression...");
+        const workflows = await Workflow.find({});
+        const alerts = await Alert.find({});
+        workflows.forEach((workflowId) => {
+            checkAndCompressLogFile(workflowId);
+        });
+        alerts.forEach((alertId) => {
+            checkAndCompressLogFile(alertId);
         });
     });
 };

@@ -1,13 +1,13 @@
 const moment = require("moment-timezone");
 const User = require("../models/user.model");
 const Alert = require("../models/alert.model");
-const Team = require("../models/team.model");
 
 const isUserAvailable = async (userId) => {
     const user = await User.findById(userId);
+    console.log("Checking user availability for ", user.username);
     const currentTime = moment().tz(user.timezone);
-    const currentDay = currentTime.format("dddd");
-    const todaySchedule = user.availability.find(
+    const currentDay = currentTime.format("dddd"); // Monday, Tuesday, ...
+    const todaySchedule = user.availabilityDetails.find(
         (schedule) => schedule.day === currentDay
     );
     if (!todaySchedule) {
@@ -18,55 +18,82 @@ const isUserAvailable = async (userId) => {
         currentHour >= todaySchedule.startHour &&
         currentHour < todaySchedule.endHour
     );
-}
+};
 
 const getEmail = async (userId) => {
     const user = await User.findById(userId);
     return user.email;
-}
+};
 
-const getUserList = async ({ alertId }) => {
+const getUserList = async (alertId) => {
     const alert = await Alert.findById(alertId).lean();
-    if(!alert){
+    if (!alert) {
         throw new Error("Alert not found");
     }
     const userList = new Set();
-    const userEmailList = new Set();
+    const userEmailList = new Map();
+    const userSlackList = new Map();
+    const userWebexList = new Map();
 
-    const userAvailabilityChecks = alert.subscribedUsers.map(async (subscription) => {
-        if (await isUserAvailable(subscription.userId)) {
-            userList.add(user.userId);
-            userEmailList.set(subscription.userId.toString(), email);
-        }
-    });
-    await Promise.all(userAvailabilityChecks); // parallel processing
-
-    const teamMemberChecks = alert.assignedTeams.map(async (team) => {
-        const teamDetails = await Team.findById(team.teamId).lean();
-        return Promise.all(
-            teamDetails.members.map(async (member) => {
-                if (await isUserAvailable(member.userId)) {
-                    const email = await getEmail(member.userId);
-                    userList.add(member.userId);
-                    userEmailList.set(member.userId.toString(), email);
+    const addUser = async (subscription) => {
+        const { userId, contactMethods, alertStatus, triggerTimeframe } =
+            subscription;
+        if (await isUserAvailable(userId)) {
+            for (const runningStatus in alert.runningStatuses) {
+                if (
+                    runningStatus.status === alertStatus &&
+                    runningStatus.timeframe === triggerTimeframe
+                ) {
+                    const { email, slack, webex } = contactMethods;
+                    if (email) {
+                        userList.add(userId.toString());
+                        userEmailList.set(userId.toString(), {
+                            email: email.emailId,
+                            message: email.message,
+                            subject: email.subject,
+                            body: email.body,
+                            options: email.options,
+                        });
+                    }
+                    if (slack?.token && slack?.channel) {
+                        userList.add(userId.toString());
+                        userSlackList.set(userId.toString(), {
+                            token: slack.token,
+                            channel: slack.channel,
+                            message: slack.message,
+                            blocks: slack.blocks,
+                            options: slack.options,
+                        });
+                    }
+                    if (webex?.room && webex?.apiKey) {
+                        userList.add(userId.toString());
+                        userWebexList.set(userId.toString(), {
+                            room: webex.room,
+                            apiKey: webex.apiKey,
+                            message: webex.message,
+                            options: webex.options,
+                        });
+                    }
                 }
-            })
-        );
-    });
-    await Promise.all(teamMemberChecks);
-
-    const assignedUserChecks = alert.assignedUsers.map(async (assignedUser) => {
-        if (await isUserAvailable(assignedUser.userId)) {
-            const email = await getEmail(assignedUser.userId);
-            userList.add(assignedUser.userId);
-            userEmailList.set(assignedUser.userId.toString(), email);
+            }
         }
-    });
-    await Promise.all(assignedUserChecks);
+    };
 
-    const userDetailList = Array.from(userList).map(userId => ({
+    const subscribedUsersList = alert.subscribedUsers.map((subscription) =>
+        addUser(subscription)
+    );
+    await Promise.all(subscribedUsersList);
+
+    const assignedUserList = alert.assignedUsers.map((assignedUser) =>
+        addUser(assignedUser)
+    );
+    await Promise.all(assignedUserList);
+
+    const userDetailList = Array.from(userList).map((userId) => ({
         id: userId,
-        email: userEmailList.get(userId.toString())
+        email: userEmailList.get(userId.toString()),
+        slack: userSlackList.get(userId.toString()),
+        webex: userWebexList.get(userId.toString()),
     }));
 
     console.log("User Detail List: ", userDetailList);

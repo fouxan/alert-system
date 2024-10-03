@@ -1,70 +1,76 @@
 const {
-    updateNextCheckTime,
     updateQueryExecStatus,
     isActionNeeded,
-    getUserList,
-    updateNextCheckTime,
     getActionDetails,
-    alertExecutionPaused,
+    getAlertName,
 } = require("../helpers/alert.helper");
 const { sendAction, notifyUsers } = require("../helpers/action.helper");
-const {getUserList} = require("../helpers/user.helper");
+const { getUserList } = require("../helpers/user.helper");
+const { sendLogs } = require("../helpers/log.helper");
+const updateActionResultsAndRunningStatus = require("../helpers/result.helper");
 
-const { storeLogs } = require("../helpers/logs.helper");
-const storeActionResult = require("../helpers/result.helper");
-
-// TODO: Test this function
 const processTriggerResult = async ({ alertId, result }) => {
-    if (alertExecutionPaused(alertId)) {
+    try {
+        const userList = await getUserList(alertId);
+        const { queryResult, queryStatus } = result;
+        const resultId = await updateActionResultsAndRunningStatus({
+            alertId: alertId,
+            result: queryResult,
+            status: queryStatus,
+        });
+        const alertName = await getAlertName(alertId);
+        const actionDetails = await getActionDetails({
+            alertId,
+            resultId,
+            queryResult,
+            queryStatus,
+        });
+        if (queryStatus === "failed") {
+            updateQueryExecStatus(alertId, "failed");
+            await notifyUsers({
+                userList,
+                type: "error",
+                variables: {
+                    alert_name: alertName,
+                    result: queryResult,
+                },
+            });
+            return;
+        }
+
         updateQueryExecStatus(alertId, "pending");
-        updateNextCheckTime({ alertId });
-        return; // skipping any action if the user has paused execution mid way
-    }
-    const userList = await getUserList({ alertId });
-    const actionDetails = await getActionDetails({ alertId });
-    const { queryResult, queryStatus } = result;
-    // if (queryStatus === "paused") {   
-    //     return;
-    // }
-    if (queryStatus === "failed") {
-        updateQueryExecStatus(alertId, "failed");
+
+        if (!actionDetails.isNeeded) {
+            console.log("No action needed for alert", alertId);
+            return;
+        }
+        console.log(
+            "Action needed for alert",
+            JSON.stringify(actionDetails, null, 2)
+        );
+        const actionPromises = [];
+        for (let i = 0; i < actionDetails.triggerCount; i++) {
+            actionPromises.push(sendAction(actionDetails));
+        }
+        await Promise.all(actionPromises);
+
         await notifyUsers({
             userList,
-            alertId,
-            result: queryResult,
-            type: "error",
+            type: "notification",
+            variables: {
+                alert_name: alertName,
+                results: queryResult,
+            },
         });
-        return;
+
+        await sendLogs(alertId, queryResult, queryStatus);
+        console.log("Action taken for alert", alertId);
+    } catch (error) {
+        console.error(
+            `Failed to process trigger result for alert ${alertId}:`,
+            error
+        );
     }
-
-    updateQueryExecStatus(alertId, "pending"); // re init for ats
-
-    const { actionNeeded, triggerCount, type } = await isActionNeeded({
-        alertId,
-        queryResult,
-    });
-    if (!actionNeeded) {
-        console.log("No action needed for alert", alertId);
-        await storeLogs(alertId, queryResult);
-        return;
-    }
-
-    await storeActionResult(alertId, queryResult);
-    await storeLogs(alertId, queryResult);
-
-    for (let i = 0; i < triggerCount; i++) {
-        await sendAction({
-            alertId,
-            queryResult,
-            userList,
-            type,
-            actionDetails,
-        });
-    }
-
-    await notifyUsers({ userList, alertId, type, actionDetails, queryResult });
-    await updateNextCheckTime({ alertId });
-    console.log("Action taken for alert", alertId);
 };
 
 module.exports = processTriggerResult;

@@ -1,33 +1,21 @@
 const Alert = require("../models/alert.model");
-const { getNextCheckTime } = require("./time.helper");
-const {convertToTimestamp} = require("./time.helper");
+const {
+    getFormattedResults,
+    getCsvFile,
+} = require("../helpers/formatter.helper");
 
-function isMaintenanceWindow(nextCheckTime, action) {
-    const endTime = convertToTimestamp(action.timeConstraints.end);
-    const startTime = convertToTimestamp(action.timeConstraints.start);
-    return { isMaintenanceWindow: nextCheckTime >= startTime && nextCheckTime <= endTime, end: endTime };
-}
-
-function isThrottled(nextCheckTime, triggerOptions) {
-    if (!triggerOptions.throttle) return false;
-    const throttleEndTime =
-        new Date().getTime() + triggerOptions.triggerSuppressTime; // assuming triggerSuppressTime is in milliseconds
-    return {isThrottled: nextCheckTime < throttleEndTime, end: throttleEndTime};
-}
-
-
-
-const isActionNeeded = async ({ alertId, result }) => {
+const isActionNeeded = async ({ alertId, queryResult }) => {
     const alert = await Alert.findById(alertId).lean();
-    const conditions = alert.conditions;
+    const conditions = alert.condition;
     let actionNeeded = false;
     let triggerCount = 0;
-    if (conditions.trigger == "num_results") {
-        if (result.length >= conditions.triggerThreshold) {
+
+    if (conditions.trigger === "num_results") {
+        if (queryResult.length >= conditions.triggerThreshold) {
             actionNeeded = true;
         }
-        if (conditions.triggerSchedule == "every_result") {
-            triggerCount = result.length;
+        if (conditions.triggerSchedule === "every_result") {
+            triggerCount = queryResult.length;
         } else {
             triggerCount = 1;
         }
@@ -36,70 +24,172 @@ const isActionNeeded = async ({ alertId, result }) => {
     return { actionNeeded, triggerCount, type };
 };
 
-const updateNextCheckTime = async ({ alertId }) => {
-    try {
-        const nextCheckTime = await getNextCheckTime({ alertId });
-        const alert = await Alert.findOneAndUpdate(
-            { "alerts._id": alertId },
-            { $set: { "alerts.$.nextCheckTime": nextCheckTime } },
-            { new: true }
-        );
-
-        if (!alert) {
-            throw new Error("Alert not found or update failed.");
-        }
-    } catch (error) {
-        console.error("Error updating next check time:", error);
-    }
-};
-
 const updateQueryExecStatus = async (alertId, status) => {
     try {
-        const alert = await Alert.findOneAndUpdate(
-            { "alerts._id": alertId },
-            { $set: { "alerts.$.queryExecStatus": status } },
+        await Alert.findOneAndUpdate(
+            { _id: alertId },
+            { $set: { queryExecStatus: status } },
             { new: true }
         );
-
-        if (!alert) {
-            throw new Error("Alert not found or update failed.");
-        }
     } catch (error) {
         console.error("Error updating query execution status:", error);
     }
 };
 
-const getActionDetails = async (alertId) => {
+const getActionDetails = async ({
+    alertId,
+    resultId,
+    queryResult,
+    queryStatus,
+}) => {
     const alert = await Alert.findById(alertId).lean();
     if (!alert) {
         throw new Error("Alert not found");
     }
-    return alert.action;
-};
+    const { actionNeeded, triggerCount, type } = await isActionNeeded({
+        alertId,
+        queryResult,
+    });
+    const actionSettings = alert.action.actionSettings;
+    let actionDetails = {
+        isNeeded: actionNeeded,
+        triggerCount: triggerCount,
+        type: type,
+        options: {},
+    };
 
-const alertExecutionPaused = async (alertId) => {
-    const alert = await Alert.findById(alertId).lean();
-    if (!alert) {
-        throw new Error("Alert not found");
+    switch (type) {
+        case "email":
+            if (!actionSettings.email)
+                throw new Error("No action details found");
+            actionDetails.email = actionSettings.email.to;
+            actionDetails.subject = actionSettings.email.subject;
+            actionDetails.bodyTemplate = actionSettings.email.body;
+            actionDetails.bodyType = actionSettings.email.bodyType;
+            options = actionSettings.email.options || {};
+            actionDetails.options = options;
+
+            if (options.attachName)
+                actionDetails.options.alertName = alert.alertName;
+            if (options.attachStatus)
+                actionDetails.options.queryStatus = queryStatus;
+            if (options.linkToAlert) {
+                const workspaceId = alert.workspaceId;
+                actionDetails.options.linkToAlert = `${process.env.BASE_URL}/ws/${workspaceId}/a/${alertId}`;
+            }
+            if (options.linkToResults) {
+                const workspaceId = alert.workspaceId;
+                actionDetails.options.linkToResults = `${process.env.BASE_URL}/ws/${workspaceId}/a/${alertId}/results/${resultId}`;
+            }
+            if (options.attachTimestamp)
+                actionDetails.options.currentTime = new Date().toLocaleString();
+            if (options.attachResults) {
+                actionDetails.options.queryResult =
+                    getFormattedResults(queryResult);
+            }
+            if (options.attachResultCount) {
+                actionDetails.options.resultCount = queryResult.length;
+            }
+            if (options.attachCsv) {
+                actionDetails.options.csv = getCsvFile(queryResult);
+            }
+            break;
+
+        case "slack":
+            if (!actionSettings.slack)
+                throw new Error("No action details found");
+            actionDetails.token = actionSettings.slack.token;
+            actionDetails.channel = actionSettings.slack.channel;
+            actionDetails.message = actionSettings.slack.message;
+            options = actionSettings.slack.options || {}; // Initialize options if undefined
+            actionDetails.options = options;
+
+            if (options.attachName)
+                actionDetails.options.alertName = alert.alertName;
+            if (options.attachStatus)
+                actionDetails.options.queryStatus = queryStatus;
+            if (options.linkToAlert) {
+                const workspaceId = alert.workspaceId;
+                actionDetails.options.linkToAlert = `${process.env.BASE_URL}/ws/${workspaceId}/a/${alertId}`;
+            }
+            if (options.linkToResults) {
+                const workspaceId = alert.workspaceId;
+                actionDetails.options.linkToResults = `${process.env.BASE_URL}/ws/${workspaceId}/a/${alertId}/results/${resultId}`;
+            }
+            if (options.attachTimestamp)
+                actionDetails.options.currentTime = new Date().toLocaleString();
+            if (options.attachResults) {
+                actionDetails.options.queryResult =
+                    getFormattedResults(queryResult);
+            }
+            if (options.attachResultCount) {
+                actionDetails.options.resultCount = queryResult.length;
+            }
+            if (options.attachCsv) {
+                actionDetails.options.csv = getCsvFile(queryResult);
+            }
+            break;
+
+        case "webex":
+            if (!actionSettings.webex)
+                throw new Error("No action details found");
+            actionDetails.roomId = actionSettings.webex.room;
+            actionDetails.apiKey = actionSettings.webex.apiKey;
+            actionDetails.message = actionSettings.webex.message;
+            options = actionSettings.webex.options || {}; // Initialize options if undefined
+            actionDetails.options = options;
+
+            if (options.attachName)
+                actionDetails.options.alertName = alert.alertName;
+            if (options.attachStatus)
+                actionDetails.options.queryStatus = queryStatus;
+            if (options.linkToAlert) {
+                const workspaceId = alert.workspaceId;
+                actionDetails.options.linkToAlert = `${process.env.BASE_URL}/ws/${workspaceId}/a/${alertId}`;
+            }
+            if (options.linkToResults) {
+                const workspaceId = alert.workspaceId;
+                actionDetails.options.linkToResults = `${process.env.BASE_URL}/ws/${workspaceId}/a/${alertId}/results/${resultId}`;
+            }
+            if (options.attachTimestamp)
+                actionDetails.options.currentTime = new Date().toLocaleString();
+            if (options.attachResults) {
+                actionDetails.options.queryResult =
+                    getFormattedResults(queryResult);
+            }
+            if (options.attachResultCount) {
+                actionDetails.options.resultCount = queryResult.length;
+            }
+            if (options.attachCsv) {
+                actionDetails.options.csv = getCsvFile(queryResult);
+            }
+            break;
+
+        case "webhook":
+            if (!actionSettings.webhook)
+                throw new Error("No action details found");
+            actionDetails.url = actionSettings.webhook.url;
+            actionDetails.message = actionSettings.webhook.message;
+            break;
+
+        default:
+            break;
     }
-    return alert.queryExecStatus === "paused";
-};
 
+    console.log("Action Details: ", actionDetails);
+    return actionDetails;
+};
 const getAlertName = async (alertId) => {
     const alert = await Alert.findById(alertId).lean();
     if (!alert) {
         throw new Error("Alert not found");
     }
-    return alert.name;
+    return alert.alertName;
 };
 
 module.exports = {
     getAlertName,
-    alertExecutionPaused,
-    updateNextCheckTime,
     updateQueryExecStatus,
     isActionNeeded,
     getActionDetails,
-    isMaintenanceWindow,
-    isThrottled
 };

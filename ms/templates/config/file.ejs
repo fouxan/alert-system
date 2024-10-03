@@ -1,0 +1,22 @@
+<source>
+    @type tail
+    path /fluentd/logs/<%= alertId %>-logs.log
+    pos_file /fluentd/logs/<%= alertId %>-logs.log.pos
+    tag <%= tag  %>
+    <parse>
+        @type json
+    </parse>
+</source>
+
+<match alert.<%= alertId %>>
+    @type elasticsearch
+    host <%= host %>
+    port <%= port %>
+    index_name <%= indexName %>
+    type_name _doc
+    user <%= username || "" %>
+    password <%= password || "" %>
+    <buffer>
+        flush_interval 5s
+    </buffer>
+</match>

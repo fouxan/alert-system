@@ -1,27 +1,6 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-const permissionSchema = new Schema(
-    {
-        _id: {
-            type: Schema.Types.ObjectId,
-            required: true,
-            refPath: "onModel",
-        },
-        permission: {
-            type: String,
-            required: true,
-            enum: ["creator", "editor", "viewer"],
-        },
-        onModel: {
-            type: String,
-            required: true,
-            enum: ["Team", "Workspace", "Folder"],
-        },
-    },
-    { _id: false }
-);
-
 const availabilitySchema = new Schema(
     {
         day: {
@@ -43,6 +22,26 @@ const availabilitySchema = new Schema(
     { _id: false }
 );
 
+const emailSchema = new Schema({
+    emailId: { type: String, required: true },
+    subject: { type: String, required: true },
+    body: { type: String, required: true },
+    options: { type: Object },
+});
+
+const slackDetailsSchema = new Schema({
+    channel: { type: String, required: true },
+    token: { type: String, required: true },
+    message: { type: String, required: true },
+    blocks: { type: Object },
+    options: { type: Object },
+});
+
+const webexDetailsSchema = new Schema({
+    roomId: { type: String, required: true },
+    webexToken: { type: String, required: true },
+});
+
 const userSchema = new Schema({
     username: { type: String, required: true },
     email: { type: String, required: true },
@@ -63,12 +62,13 @@ const userSchema = new Schema({
             { day: "Friday", start: 9, end: 17 },
         ],
     },
+    contactDetails: {
+        email: String,
+        mobileNumber: String,
+    },
+    slackDetails: [slackDetailsSchema],
+    webexDetails: [webexDetailsSchema],
     passwordHash: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
-    teams: [permissionSchema],
-    workspaces: [permissionSchema],
-    folders: [permissionSchema],
 });
 
 const User = mongoose.model("User", userSchema);

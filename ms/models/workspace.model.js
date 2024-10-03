@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
+// finalized
 const memberSchema = new Schema(
     {
         userId: { type: Schema.Types.ObjectId, required: true, ref: "User" },
@@ -13,6 +14,7 @@ const memberSchema = new Schema(
     { _id: false }
 );
 
+//finalized
 const invitationSchema = new Schema(
     {
         token: { type: String, required: true },
@@ -21,44 +23,30 @@ const invitationSchema = new Schema(
     { _id: false }
 );
 
-const ESSettingsSchema = new Schema(
+// finalized
+const dataRetentionSchema = new Schema(
     {
-        host: { type: String, required: true },
-        port: { type: Number, default: 9200 },
-        username: { type: String },
-        password: { type: String },
-        protocol: { type: String, default: "https" },
-        apiVersion: { type: String, default: "7.x" },
-        caCertificate: { type: String },
-        clientCertificate: { type: String },
-        clientKey: { type: String },
-        timeout: { type: Number, default: 30000 },
+        period: { type: Number, required: true },
+        endTime: { type: Date },
     },
     { _id: false }
 );
 
+//finalized
 const workspaceSchema = new Schema({
     name: { type: String, required: true },
     desc: String,
     members: [memberSchema],
     invitations: [invitationSchema],
     folders: [{ type: Schema.Types.ObjectId, ref: "Folder" }],
-    dataRetention: {
-        type: Date,
-        default: () => Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
-    },
-    dataRetentionPeriod: { type: Number, default: 30 }, // in days
-    ESSettings: ESSettingsSchema,
+    dataRetention: dataRetentionSchema,
+    ESSettings: [{ type: Schema.Types.ObjectId, ref: "ESSettings" }],
+    models: [{ type: Schema.Types.ObjectId, ref: "Model" }],
+    vectorStores: [{ type: Schema.Types.ObjectId, ref: "VectorStore" }],
+    sources: [{ type: Schema.Types.ObjectId, ref: "DataSource" }],
     deleteKey: Number,
-    configFileCreated: { type: Boolean, default: false },
-});
-
-workspaceSchema.pre("save", function (next) {
-    const now = Date.now();
-    this.dataRetention = new Date(
-        now + this.dataRetentionPeriod * 24 * 60 * 60 * 1000
-    );
-    next();
+    sendRetentionMail: { type: Boolean, default: false },
+    workflows: [{ type: Schema.Types.ObjectId, ref: "Workflow" }],
 });
 
 const Workspace = mongoose.model("Workspace", workspaceSchema);

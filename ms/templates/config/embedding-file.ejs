@@ -1,0 +1,22 @@
+[SERVICE]
+    Flush        5
+    Daemon       Off
+    Log_Level    info
+
+[INPUT]
+    Name        tail
+    Path        /var/log/fluentbit/<%= alertId %>-logs.log
+    Parser      json
+    Tag         <%= alertId %>-logs
+
+[OUTPUT]
+    Name        es
+    Match       <%= alertId %>-logs.log
+    Host        <%= host %>
+    Port        <%= port %>
+    Index       <%= esIndex %>
+    Type        _doc
+    HTTP_User   <%= username || "" %>
+    HTTP_Passwd <%= password || "" %>
+    tls         <%= tls %>
+    tls.verify  <%= tls && skipTlsVerify ? "Off" : "On" %>

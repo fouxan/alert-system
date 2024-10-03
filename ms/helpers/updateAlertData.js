@@ -1,3 +1,5 @@
+const Alert = require("../models/alert.model");
+
 const updateAlertData = async (alertId, newData) => {
     try {
         let updateOperation = {};

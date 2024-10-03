@@ -1,14 +1,12 @@
 require("dotenv").config();
 const { connectDB } = require("./config/db.config");
-const { initProducer } = require("./services/kafka.service");
-const { processAlerts } = require("./controllers/alert.controller");
-const cron = require("node-cron");
+const { initProducer, initConsumer } = require("./services/kafka.service");
+const { initScheduler } = require("./scheduler");
 
 (async () => {
     await connectDB();
-    const producer = initProducer();
-    cron.schedule("* * * * *", async () => {
-        console.log("Running alert check...");
-        await processAlerts();
-    });
+    await initScheduler();
+    await initProducer();
+    await initConsumer();
+    console.log("Running ATS...");
 })();

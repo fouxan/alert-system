@@ -1,84 +1,139 @@
+const handlebars = require("handlebars");
 const nodemailer = require("nodemailer");
 const fs = require("fs");
 const path = require("path");
-const Handlebars = require("handlebars");
 const axios = require("axios");
 const { WebClient } = require("@slack/web-api");
 
-const { getAlertName } = require("./alert.helper");
+// TODO: Finish implementing the notifyUsers, sendSlack and sendWebex functions
 
-// const { linkToAlert, linkToResult, attachCSV, attachPDF } = options;
-//
-// if (attachCSV) {
-//     const csvLink = generateCSVLink(); // Implement this function
-//     mailOptions.html += `<a href="${csvLink}">View CSV</a>`;
-// }
-// if (attachPDF) {
-//     const pdfLink = generatePDFLink(); // Implement this function
-//     mailOptions.html += `<a href="${pdfLink}">View PDF</a>`;
-// }
-// if (linkToAlert) {
-//     const alertLink = getAlertLink(); // Implement this function
-//     mailOptions.html += `<a href="${alertLink}">View Alert</a>`;
-// }
-// if (linkToResult) {
-//     const resultLink = getResultLink(); // Implement this function
-//     mailOptions.html += `<a href="${resultLink}">View Result</a>`;
-// }
+async function notifyUsers({ userList, type, variables }) {
+    if (userList.length === 0) {
+        console.log("Empty user list, no users to notify.");
+        return;
+    }
 
-async function getTemplate(templateName) {
-    const filePath = path.join(
-        __dirname,
-        "..",
-        "public",
-        templateName,
-        `index.html`
-    );
-    const templateSource = await fs.promises.readFile(filePath, "utf8");
-    return Handlebars.compile(templateSource);
-}
-
-async function notifyUsers({ userList, alertId, type, result }) {
     const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-            user: process.env.EMAIL_FROM,
+            user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
         },
     });
 
-    const alertName = await getAlertName(alertId);
-
     const templateName = type === "error" ? "error-alert" : "trigger-alert";
-    const template = await getTemplate(templateName);
+    const templatePath = path.join(
+        __dirname,
+        "..",
+        "templates",
+        "email",
+        templateName,
+        "index.html"
+    );
 
-    const htmlContent = template({
-        alertId,
-        alertName,
-        results: JSON.stringify(result, null, 2),
+    let htmlContent;
+    try {
+        htmlContent = fs.readFileSync(templatePath, "utf8");
+    } catch (err) {
+        console.error("Failed to read email template:", err);
+        return;
+    }
+
+    // Replacing variables in the email template
+    Object.keys(variables).forEach((key) => {
+        htmlContent = htmlContent.replace(
+            new RegExp(`{{${key}}}`, "g"),
+            variables[key]
+        );
     });
 
-    const emails = userList.map((user) => user.email).join(", ");
+    // Notify users by email, Slack, and Webex based on their preferences
+    for (const user of userList) {
+        const { email, slack, webex } = user;
 
-    const mailOptions = {
-        from: process.env.EMAIL_FROM,
-        to: emails,
-        subject: `${
-            type === "error" ? "Error" : "Trigger"
-        } Alert: ${alertId} - ${alertName}`,
-        html: htmlContent,
-    };
+        // Email notification
+        if (email && email.emailId) {
+            try {
+                await sendMail({
+                    email: email.emailId,
+                    subject: email?.subject,
+                    bodyTemplate: email?.body || htmlContent,
+                    bodyType: "html",
+                    options: email?.options,
+                });
+                console.log(`Email sent successfully to: ${email}`);
+            } catch (error) {
+                console.error(`Failed to send email to ${email}:`, error);
+            }
+        }
 
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log("Email sent successfully to:", emails);
-    } catch (error) {
-        console.error("Failed to send email:", error);
+        // Slack notification
+        if (slack && slack.token && slack.channel) {
+            const slackMessage = slack?.message;
+            if (!slackMessage && !slack.blocks && !slack.options) {
+                const slackTemplatePath = path.join(
+                    __dirname,
+                    "..",
+                    "templates",
+                    "slack",
+                    templateName,
+                    "index.txt"
+                );
+                try {
+                    slackMessage = fs.readFileSync(slackTemplatePath, "utf8");
+                } catch (err) {
+                    console.error("Failed to read slack template:", err);
+                    return;
+                }
+                Object.keys(variables).forEach((key) => {
+                    slackMessage = slackMessage.replace(
+                        new RegExp(`{{${key}}}`, "g"),
+                        variables[key]
+                    );
+                });
+            }
+            try {
+                await sendSlackMessage({
+                    token: slack.token,
+                    channel: slack.channel,
+                    message: slackMessage,
+                    blocks: slack?.blocks,
+                    options: slack?.options,
+                });
+                console.log(
+                    `Slack message sent successfully to channel: ${slack.channel}`
+                );
+            } catch (error) {
+                console.error(
+                    `Failed to send Slack message to channel ${slack.channel}:`,
+                    error
+                );
+            }
+        }
+
+        // Webex notification
+        if (webex && webex.room && webex.apiKey) {
+            try {
+                await sendWebexMessage({
+                    roomId: webex.room,
+                    message: webex?.message,
+                    apiKey: webex.apiKey,
+                });
+                console.log(
+                    `Webex message sent successfully to room: ${webex.room}`
+                );
+            } catch (error) {
+                console.error(
+                    `Failed to send Webex message to room ${webex.room}:`,
+                    error
+                );
+            }
+        }
     }
 }
 
-async function sendSlackMessage({ channel, message }) {
-    const slackClient = new WebClient(actionSettings.slack.token);
+async function sendSlackMessage({ token, channel, message, blocks, options }) {
+    const slackClient = new WebClient(token);
     try {
         await slackClient.chat.postMessage({
             channel: channel,
@@ -122,76 +177,96 @@ async function sendWebhookNotification({ url, message }) {
     }
 }
 
-async function sendMail({ email, subject, text, bodyType, options }) {
+async function sendMail({ email, subject, bodyTemplate, bodyType, options }) {
+    console.log("Email:", email);
     const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-            user: process.env.EMAIL_FROM,
+            user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
         },
     });
 
     const mailOptions = {
-        from: process.env.EMAIL_FROM,
+        from: process.env.EMAIL_USER,
         to: email,
         subject,
     };
 
+    console.log("Body template:", bodyTemplate);
+
+    const context = {
+        currentTime: options?.currentTime || new Date().toLocaleString(),
+        queryResults: options?.queryResults || "",
+        queryStatus: options?.queryStatus || "",
+        resultCount: options?.resultCount || 0,
+        alertName: options?.alertName || "",
+        linkToResults: options?.linkToResults || "",
+        linkToAlert: options?.linkToAlert || "",
+    };
+
+    const template = handlebars.compile(bodyTemplate);
+    const body = template(context);
+
     if (bodyType === "html") {
-        mailOptions.html = text;
-    }else{
-        mailOptions.text = text;
+        mailOptions.html = body;
+    } else {
+        mailOptions.text = body;
+    }
+
+    if (options.csv) {
+        mailOptions.attachments = [
+            {
+                filename: "results.csv",
+                path: options.csv,
+            },
+        ];
     }
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log("Email sent successfully to:", emails);
+        if (options.csv) {
+            fs.unlinkSync(options.csv);
+        }
+        console.log("Email sent successfully to:", email);
     } catch (error) {
         console.error("Failed to send email:", error);
     }
 }
 
-async function sendAction({ actionDetails }) {
-    const { actionType, actionSettings } = actionDetails;
-    const subject =
-        actionType === "email"
-            ? actionSettings.email.subject +
-              ` | ${actionSettings.email.priority.toUpperCase()} Priority`
-            : null;
-
-    switch (actionType) {
-        case "email":
-            message = actionSettings.email.body;
-            await sendMail({
-                email: actionSettings.email.to,
-                subject,
-                bodyType: actionSettings.email.bodyType,
-                text: actionSettings.email.body,
-                options: actionSettings.email.options,
-            });
-            break;
-        case "slack":
-            await sendSlackMessage({
-                channel: actionSettings.slack.channel,
-                message: actionSettings.slack.message,
-            });
-            break;
-        case "webex":
-            await sendWebexMessage({
-                roomId: actionSettings.webex.room,
-                message: actionSettings.webex.message,
-                apiKey: actionSettings.webex.apiKey,
-            });
-            break;
-        case "webhook":
-            await sendWebhookNotification({
-                url: actionSettings.webhook.url,
-                message: actionSettings.webhook.message,
-            });
-            break;
-        default:
-            console.error("Unsupported action type:", actionType);
+async function sendAction(actionDetails) {
+    if (!["email", "slack", "webex", "webhook"].includes(actionDetails.type)) {
+        console.error("Unsupported action type:", actionDetails.type);
+        return;
     }
+    if (actionDetails.type === "email") {
+        await sendMail(actionDetails);
+    }
+    if (actionDetails.type === "slack") {
+        await sendSlackMessage(actionDetails);
+    }
+    if (actionDetails.type === "webex") {
+        await sendWebexMessage(actionDetails);
+    }
+    if (actionDetails.type === "webhook") {
+        await sendWebhookNotification(actionDetails);
+    }
+    // switch (actionDetails.type) {
+    //     case "email":
+    //         await sendMail(actionDetails);
+    //         break;
+    //     case "slack":
+    //         await sendSlackMessage(actionDetails);
+    //         break;
+    //     case "webex":
+    //         await sendWebexMessage(actionDetails);
+    //         break;
+    //     case "webhook":
+    //         await sendWebhookNotification(actionDetails);
+    //         break;
+    //     default:
+    //         console.error("Unsupported action type:", actionType);
+    // }
 }
 
 module.exports = { sendAction, notifyUsers };

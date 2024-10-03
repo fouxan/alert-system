@@ -9,7 +9,7 @@ exports.createTeam = async (req, res) => {
         const team = new Team({
             name,
             description,
-            createdBy: userId,
+            creator: userId,
             members: [
                 {
                     userId: userId,
@@ -210,7 +210,7 @@ exports.removeUserFromTeam = async (req, res) => {
             });
         }
 
-        if (team.createdBy === userIdToRemove) {
+        if (team.creator === userIdToRemove) {
             return res.status(400).send({
                 message: "You can not remove the creator of the team.",
             });
@@ -237,7 +237,7 @@ exports.removeUserFromTeam = async (req, res) => {
 exports.modifyUserInTeam = async (req, res) => {
     const userId = req.user.id;
     const { teamId } = req.params;
-    const { userIdToModify, permissions } = req.body;
+    const { userIdToModify, newPermissions } = req.body;
 
     try {
         const team = await Team.findOne({
@@ -260,7 +260,7 @@ exports.modifyUserInTeam = async (req, res) => {
             });
         }
 
-        if (team.createdBy.toString() === userIdToModify) {
+        if (team.creator.toString() === userIdToModify) {
             return res.status(400).send({
                 message: "You can not modify the creator of the team.",
             });
@@ -275,7 +275,7 @@ exports.modifyUserInTeam = async (req, res) => {
             });
         }
 
-        member.permissions = permissions;
+        member.permissions = newPermissions;
         await team.save();
 
         res.status(200).send({
@@ -298,7 +298,7 @@ exports.deleteTeam = async (req, res) => {
     try {
         const team = await Team.findOne({
             _id: teamId,
-            createdBy: userId,
+            creator: userId,
         });
         if (!team) {
             return res.status(404).send({
@@ -307,7 +307,7 @@ exports.deleteTeam = async (req, res) => {
             });
         }
 
-        if (userId !== team.createdBy.toString()) {
+        if (userId !== team.creator.toString()) {
             return res.status(403).send({
                 message:
                     "You do not have permission to delete this team, only the creator can delete a team",

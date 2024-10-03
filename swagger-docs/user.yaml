@@ -1,0 +1,392 @@
+openapi: 3.0.0
+info:
+    title: User Management API
+    description: |
+        This API provides user management functionalities including user registration, authentication, password management, and user profile operations.
+        It supports integration with Slack and Webex for additional user details.
+    version: 1.0.0
+    contact:
+        name: API Support
+        email: support@example.com
+
+servers:
+    - url: https://api.example.com/u
+      description: Production server
+    - url: http://localhost:5678/u
+      description: Development server
+
+tags:
+    - name: Users
+      description: Operations related to user management
+
+paths:
+    /register:
+        post:
+            tags:
+                - Users
+            summary: Register a new user
+            description: Registers a new user with the required details and sends a welcome email.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                username:
+                                    type: string
+                                    description: The username for the new user.
+                                    example: johndoe
+                                email:
+                                    type: string
+                                    description: The email address of the user.
+                                    example: johndoe@example.com
+                                password:
+                                    type: string
+                                    description: The user's password.
+                                    example: mypassword123
+                                desc:
+                                    type: string
+                                    description: A brief description about the user.
+                                    example: "I am a software developer."
+                                mobileNumber:
+                                    type: string
+                                    description: The user's mobile number.
+                                    example: "+1234567890"
+                                timezone:
+                                    type: string
+                                    description: The user's timezone.
+                                    example: "America/New_York"
+                                availabilityDetails:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/Availability"
+                                    description: A list of the user's availability details.
+                                slackDetails:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/SlackDetails"
+                                    description: The user's Slack details.
+                                webexDetails:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/WebexDetails"
+                                    description: The user's Webex details.
+            responses:
+                "201":
+                    description: User registered successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                        description: The unique ID of the created user.
+                                    username:
+                                        type: string
+                                    email:
+                                        type: string
+                "400":
+                    description: Bad request - Missing required fields
+                "500":
+                    description: Server error - Unable to register user
+
+    /login:
+        post:
+            tags:
+                - Users
+            summary: Authenticate user and obtain a token
+            description: Authenticates the user by verifying the email and password, and returns a JWT token if successful.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                email:
+                                    type: string
+                                    description: The user's email address.
+                                    example: johndoe@example.com
+                                password:
+                                    type: string
+                                    description: The user's password.
+                                    example: mypassword123
+            responses:
+                "200":
+                    description: Authentication successful
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    token:
+                                        type: string
+                                        description: The JWT token to be used for authenticated requests.
+                "401":
+                    description: Unauthorized - Invalid email or password
+                "500":
+                    description: Server error - Unable to authenticate user
+
+    /forgot_password:
+        post:
+            tags:
+                - Users
+            summary: Request a temporary password
+            description: Generates a temporary password and sends it to the user's email if the user is found.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                email:
+                                    type: string
+                                    description: The email address associated with the user's account.
+                                    example: johndoe@example.com
+            responses:
+                "200":
+                    description: Temporary password sent
+                "404":
+                    description: User not found
+                "500":
+                    description: Server error - Unable to process request
+
+    /change_password:
+        post:
+            tags:
+                - Users
+            summary: Change the user's password
+            description: Changes the user's password after verifying the old password. Sends an email notification upon successful change.
+            security:
+                - bearerAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                oldPassword:
+                                    type: string
+                                    description: The user's current password.
+                                    example: oldpassword123
+                                newPassword:
+                                    type: string
+                                    description: The new password to set for the user.
+                                    example: newpassword456
+            responses:
+                "200":
+                    description: Password changed successfully
+                "401":
+                    description: Unauthorized - Invalid old password
+                "404":
+                    description: User not found
+                "500":
+                    description: Server error - Unable to change password
+
+    /me:
+        get:
+            tags:
+                - Users
+            summary: Get the authenticated user's details
+            description: Retrieves the details of the authenticated user.
+            security:
+                - bearerAuth: []
+            responses:
+                "200":
+                    description: User details retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/User"
+                "404":
+                    description: User not found
+                "500":
+                    description: Server error - Unable to retrieve user details
+
+    /update_user:
+        post:
+            tags:
+                - Users
+            summary: Update the user's details
+            description: Updates the user's profile details including description, contact information, and availability.
+            security:
+                - bearerAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                desc:
+                                    type: string
+                                    description: A brief description about the user.
+                                    example: "I am a software developer."
+                                mobileNumber:
+                                    type: string
+                                    description: The user's mobile number.
+                                    example: "+1234567890"
+                                timezone:
+                                    type: string
+                                    description: The user's timezone.
+                                    example: "America/New_York"
+                                slackDetails:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/SlackDetails"
+                                webexDetails:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/WebexDetails"
+            responses:
+                "200":
+                    description: User updated successfully
+                "404":
+                    description: User not found
+                "500":
+                    description: Server error - Unable to update user
+
+    /update_availability:
+        post:
+            tags:
+                - Users
+            summary: Update the user's availability
+            description: Updates the user's availability details based on the provided information.
+            security:
+                - bearerAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                availabilityDetails:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/Availability"
+            responses:
+                "200":
+                    description: Availability updated successfully
+                "404":
+                    description: User not found
+                "500":
+                    description: Server error - Unable to update availability
+
+    /contact_details:
+        get:
+            tags:
+                - Users
+            summary: Get the user's contact details
+            description: Retrieves the contact details of the authenticated user including email, mobile number, Slack, and Webex details.
+            security:
+                - bearerAuth: []
+            responses:
+                "200":
+                    description: Contact details retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    email:
+                                        type: string
+                                        description: The user's email address.
+                                    mobileNumber:
+                                        type: string
+                                        description: The user's mobile number.
+                                    slackDetails:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/SlackDetails"
+                                    webexDetails:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/WebexDetails"
+                "404":
+                    description: User not found
+                "500":
+                    description: Server error - Unable to retrieve contact details
+
+components:
+    securitySchemes:
+        bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+
+    schemas:
+        User:
+            type: object
+            properties:
+                id:
+                    type: string
+                username:
+                    type: string
+                    description: The user's username.
+                email:
+                    type: string
+                    description: The user's email address.
+                desc:
+                    type: string
+                    description: A brief description of the user.
+                mobileNumber:
+                    type: string
+                    description: The user's mobile number.
+                timezone:
+                    type: string
+                    description: The user's timezone.
+                availabilityDetails:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/Availability"
+                slackDetails:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/SlackDetails"
+                webexDetails:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/WebexDetails"
+
+        Availability:
+            type: object
+            properties:
+                day:
+                    type: string
+                    description: The day of the week.
+                    example: "Monday"
+                timeSlots:
+                    type: array
+                    items:
+                        type: string
+                        description: Time slots available on the specified day.
+                        example: "09:00-11:00"
+
+        SlackDetails:
+            type: object
+            properties:
+                slackUsername:
+                    type: string
+                    description: The Slack username of the user.
+                    example: johndoe
+                slackEmail:
+                    type: string
+                    description: The Slack email of the user.
+                    example: johndoe@slack.com
+
+        WebexDetails:
+            type: object
+            properties:
+                webexUsername:
+                    type: string
+                    description: The Webex username of the user.
+                    example: johndoe
+                webexEmail:
+                    type: string
+                    description: The Webex email of the user.
+                    example: johndoe@webex.com

@@ -13,10 +13,14 @@ const runConsumer = async () => {
 
     await consumer.subscribe({ topic: "results" });
     await consumer.run({
-        eachMessage: async ({ topic, partition, message }) => {
+        eachMessage: async ({ message }) => {
             const { alertId, result } = JSON.parse(message.value.toString());
-            console.log(`Received result for alert ${alertId}:`, result);
-            await processTriggerResult({ alertId, result });
+            console.log(`Received result for alert ${alertId}:`);
+            try {
+                await processTriggerResult({ alertId, result });
+            } catch (err) {
+                console.error("Failed to process trigger result:", err);
+            }
         },
     });
     process.on("SIGINT", shutdown);

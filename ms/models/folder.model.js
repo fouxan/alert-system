@@ -4,30 +4,29 @@ const Schema = mongoose.Schema;
 const folderSchema = new Schema({
     name: { type: String, required: true },
     desc: { type: String },
+    creator: { type: Schema.Types.ObjectId, ref: "User", required: true },
     visibility: {
         type: String,
         required: true,
         enum: ["private", "public"],
         default: "public",
     },
-    workspaceId: {
-        type: Schema.Types.ObjectId,
-        ref: "Workspace",
-        required: true,
-    },
-    deleteKey: Number,
+
     alerts: [{ type: Schema.Types.ObjectId, ref: "Alert" }],
 });
 
-
-const userFolderSchema = new Schema(
+const workspaceFolderSchema = new Schema(
     {
-        userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        workspaceId: {
+            type: Schema.Types.ObjectId,
+            ref: "Workspace",
+            required: true,
+        },
         folders: [folderSchema],
     },
     { timestamps: true }
 );
 
-const Folder = mongoose.model("UserFolder", userFolderSchema);
+const Folder = mongoose.model("Folder", workspaceFolderSchema);
 
 module.exports = Folder;

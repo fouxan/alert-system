@@ -4,7 +4,8 @@ const Alert = require("../models/alert.model");
 
 exports.createFolder = async (req, res) => {
     const userId = req.user.id;
-    const { name, description, visibility, workspaceId } = req.body;
+    const { name, description, visibility } = req.body;
+    const { workspaceId } = req.params;
     try {
         const workspace = await Workspace.findOne({
             _id: workspaceId,
@@ -17,23 +18,23 @@ exports.createFolder = async (req, res) => {
             });
         }
 
-        const userFolders = await Folder.findOneAndUpdate(
-            { userId: userId },
+        const workspaceFolders = await Folder.findOneAndUpdate(
+            { workspaceId: workspaceId },
             {
                 $push: {
                     folders: {
                         name: name,
                         desc: description,
                         visibility: visibility,
-                        workspaceId: workspaceId,
+                        creator: userId,
                     },
                 },
             },
             { new: true, upsert: true }
         );
 
-        const newFolder = userFolders.folders.slice(-1)[0]; 
-        
+        const newFolder = workspaceFolders.folders.slice(-1)[0];
+
         await Workspace.findByIdAndUpdate(workspaceId, {
             $push: { folders: newFolder._id },
         });
@@ -51,18 +52,17 @@ exports.createFolder = async (req, res) => {
 };
 
 exports.getFolder = async (req, res) => {
-    const userId = req.user.id;
-    const { folderId } = req.params;
+    const { workspaceId, folderId } = req.params;
     try {
-        const userFolder = await Folder.findOne(
-            { userId },
+        const workspaceFolders = await Folder.findOne(
+            { workspaceId },
             { folders: { $elemMatch: { _id: folderId } } }
         );
-        if (!userFolder || userFolder.folders.length === 0) {
+        if (!workspaceFolders || workspaceFolders.folders.length === 0) {
             return res.status(404).send({ message: "Folder not found." });
         }
 
-        res.send(userFolder.folders[0]);
+        res.send(workspaceFolders.folders[0]);
     } catch (error) {
         console.error("Error in getting Folder: ", error);
         res.status(500).send({
@@ -72,8 +72,7 @@ exports.getFolder = async (req, res) => {
 };
 
 exports.updateFolder = async (req, res) => {
-    const userId = req.user.id;
-    const { folderId } = req.params;
+    const { workspaceId, folderId } = req.params;
     const updates = req.body;
 
     let updateOperations = {};
@@ -82,7 +81,7 @@ exports.updateFolder = async (req, res) => {
     }
     try {
         const result = await Folder.findOneAndUpdate(
-            { userId, "folders._id": folderId },
+            { workspaceId, "folders._id": folderId },
             { $set: updateOperations },
             { new: true }
         );
@@ -106,16 +105,24 @@ exports.updateFolder = async (req, res) => {
 };
 
 // only the creator can delete a folder so I am omitting the confirm deletion here.
+
 exports.deleteFolder = async (req, res) => {
     const userId = req.user.id;
-    const { folderId } = req.params;
+    const { folderId, workspaceId } = req.params;
 
     try {
-        const userFolders = await Folder.findOne({ userId });
-        const folderToDelete = userFolders.folders.id(folderId);
+        const workspaceFolders = await Folder.findOne({ workspaceId });
+        const folderToDelete = workspaceFolders.folders.id(folderId);
 
         if (!folderToDelete) {
             return res.status(404).send({ message: "Folder not found." });
+        }
+
+        if (folderToDelete.creator.toString() !== userId) {
+            return res.status(403).send({
+                message:
+                    "You are not authorized to delete this folder, only the creator can.",
+            });
         }
 
         const alertIds = folderToDelete.alerts;
@@ -125,7 +132,7 @@ exports.deleteFolder = async (req, res) => {
         });
 
         await Folder.findOneAndUpdate(
-            { userId },
+            { workspaceId },
             { $pull: { folders: { _id: folderId } } },
             { new: true }
         );
@@ -142,14 +149,17 @@ exports.deleteFolder = async (req, res) => {
 };
 
 exports.listFolders = async (req, res) => {
-    const userId = req.user.id;
+    const { workspaceId } = req.params;
     try {
-        const userFolders = await Folder.findOne({ userId });
-        if (!userFolders) {
+        const workspaceFolders = await Folder.findOne({ workspaceId });
+        if (!workspaceFolders) {
             return res.status(404).send({ message: "No folders found." });
         }
 
-        if (!userFolders.folders || userFolders.folders.length === 0) {
+        if (
+            !workspaceFolders.folders ||
+            workspaceFolders.folders.length === 0
+        ) {
             return res
                 .status(200)
                 .send({ message: "No folders found.", folders: [] });
@@ -157,7 +167,7 @@ exports.listFolders = async (req, res) => {
 
         res.json({
             message: "Folders retrieved successfully.",
-            folders: userFolders.folders,
+            folders: workspaceFolders.folders,
         });
     } catch (error) {
         console.error("Error in listing Folders: ", error);
@@ -168,15 +178,14 @@ exports.listFolders = async (req, res) => {
 };
 
 exports.allAlerts = async (req, res) => {
-    const userId = req.user.id;
-    const { folderId } = req.params;
+    const { workspaceId, folderId } = req.params;
     try {
-        const userFolder = await Folder.findOne({ userId });
-        if (!userFolder) {
+        const workspaceFolders = await Folder.findOne({ workspaceId });
+        if (!workspaceFolders) {
             return res.status(404).send({ message: "No folders found." });
         }
 
-        const folder = userFolder.folders.id(folderId);
+        const folder = workspaceFolders.folders.id(folderId);
         if (!folder) {
             return res.status(404).send({ message: "Folder not found." });
         }

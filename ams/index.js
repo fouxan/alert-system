@@ -2,7 +2,7 @@ require('dotenv').config();
 const { connectDB } = require('./config/db.config');
 const { scheduleTasks } = require('./utils/scheduler');
 
-const startServer = async () => {
+const run = async () => {
     try {
         await connectDB();
         scheduleTasks();
@@ -13,4 +13,4 @@ const startServer = async () => {
     }
 };
 
-startServer();
+run();

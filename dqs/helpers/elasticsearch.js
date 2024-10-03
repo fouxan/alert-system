@@ -1,24 +1,20 @@
 const { Client } = require('@elastic/elasticsearch');
-const DataSource = require("../models/datasource.model");
 
 async function performElasticSearchQuery(dbSettings) {
     try {
-        const dataSource = await DataSource.findById(dbSettings.id);
-        if (!dataSource) throw new Error("Data source not found");
-
         const client = new Client({
-            node: `https://${dataSource.host}:${dataSource.port}`,
+            node: `https://${dbSettings.host}:${dbSettings.port}`,
             auth: {
-                username: dataSource.username,
-                password: dataSource.password
+                username: dbSettings.username,
+                password: dbSettings.password
             },
             ssl: {
-                rejectUnauthorized: !dataSource.skipTlsVerify
+                rejectUnauthorized: !dbSettings.skipTlsVerify
             }
         });
 
         const { body } = await client.search({
-            index: dataSource.indexName,
+            index: dbSettings.indexName,
             body: {
                 query: {
                     match: dbSettings.query

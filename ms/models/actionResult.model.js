@@ -9,25 +9,46 @@ const actionNoteSchema = new Schema(
     { timestamps: true, _id: true }
 );
 
-const resultSchema = new Schema({
-    actionTaken: {
-        type: String,
-        enum: ["snoozed", "acknowledged", "closed", "re-escalated", "none"],
-        default: "none",
+const resultSchema = new Schema(
+    {
+        resultData: { type: Schema.Types.Mixed, required: true },
+        timestamp: { type: Date, default: Date.now },
+        resultStatus: {
+            type: String,
+            enum: ["success", "failure"],
+            default: "success",
+        },
     },
-    resultData: Schema.Types.Mixed,
-    actionBy: { type: Schema.Types.ObjectId, ref: "User" },
-    actionNotes: [actionNoteSchema],
-    status: {
-        type: String,
-        enum: ["pending", "completed"],
-        default: "pending",
-    },
-});
+    { timestamps: true, _id: true }
+);
 
 const actionResultsSchema = new Schema({
     alert_id: { type: Schema.Types.ObjectId, ref: "Alert", required: true },
-    results: [resultSchema],
+    results: [
+        {
+            actions: {
+                actionTaken: {
+                    type: String,
+                    enum: [
+                        "snoozed",
+                        "acknowledged",
+                        "closed",
+                        "re-escalated",
+                        "none",
+                    ],
+                    default: "none",
+                },
+                actionBy: { type: Schema.Types.ObjectId, ref: "User" },
+                actionNotes: [actionNoteSchema],
+                status: {
+                    type: String,
+                    enum: ["pending", "completed"],
+                    default: "pending",
+                },
+            },
+            result: resultSchema,
+        },
+    ],
 });
 
 const ActionResult = mongoose.model("ActionResult", actionResultsSchema);

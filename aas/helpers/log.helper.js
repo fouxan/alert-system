@@ -1,6 +1,6 @@
-const storeLogs = async (alertId, queryResult) => {
-    // store logs in db
-    console.log("Storing logs for alert", alertId);
-}
+const { sendToKafka } = require("../services/kafka.service");
 
-module.exports = { storeLogs };
+exports.sendLogs = async (alertId, queryResult, queryStatus) => {
+    await sendToKafka("logs", [{ alertId, queryResult, queryStatus }]);
+    console.log("Logs sent successfully to Kafka");
+};
