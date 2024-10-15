@@ -84,12 +84,62 @@ const uploadDocument = async (req, res) => {
 
 		res.status(200).json({
 			message: "Document uploaded and embedding process started",
+			documentId: docId,
 		});
 	} catch (error) {
 		console.error("Error uploading document:", error);
 		res.status(500).json({
 			error: "Failed to upload and start embedding document",
 		});
+	}
+};
+
+const retryEmbedding = async (req, res) => {
+	const { workspaceId, docId } = req.params;
+
+	if (!workspaceId || !docId) {
+		return res.status(400).json({ error: "Missing required parameters" });
+	}
+
+	try {
+		const documentData = await Document.findOne({ workspaceId });
+		if (!documentData || !documentData.documents.id(docId)) {
+			return res.status(404).json({ error: "Document not found" });
+		}
+
+		const document = documentData.documents.id(docId);
+		if (document.isEmbedded) {
+			return res.status(400).json({ message: "Document already embedded" });
+		}
+
+		const workerData = {
+			temId: document.embeddedUsing.toString(),
+			storeId: document.embeddingsStoredAt.toString(),
+			workspaceId,
+			filePath: document.path,
+			fileContent: await getFileContent(document.path),
+			documentId: docId,
+		};
+
+		const worker = new Worker(
+			path.resolve(__dirname, "../workers/embedDoc.worker.js"),
+			{ workerData }
+		);
+		worker.on("error", (error) => {
+			console.error("Worker error:", error);
+		});
+		worker.on("exit", (code) => {
+			if (code !== 0) {
+				console.error(`Worker stopped with exit code ${code}`);
+			}
+		});
+
+		res.status(200).json({
+			message: "Document embedding process started",
+		});
+	} catch (error) {
+		console.error("Error retrying embedding:", error);
+		res.status(500).json({ error: "Failed to start embedding process" });
 	}
 };
 
@@ -138,4 +188,4 @@ const chatWithDocument = async (req, res) => {
 	}
 };
 
-module.exports = { uploadDocument, chatWithDocument };
+module.exports = { uploadDocument, retryEmbedding, chatWithDocument };

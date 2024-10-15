@@ -1,9 +1,11 @@
 const VectorStore = require("./LCVectorStore");
 
 const createVectorStore = async (storeId, modelId) => {
-    const vectorStore = new VectorStore(storeId, modelId);
-    await vectorStore.init();
-    return vectorStore;
+	const storeIdString = storeId.toString();
+	const modelIdString = modelId.toString();
+	const vectorStore = new VectorStore(storeIdString, modelIdString);
+	await vectorStore.init();
+	return vectorStore;
 };
 
 module.exports = { createVectorStore };

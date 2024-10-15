@@ -13,7 +13,7 @@ const connection_string = process.env.MONGODB_URI;
 app.use(express.json());
 
 mongoose
-	.connect(connection_string)
+	.connect(connection_string, { maxPoolSize: 10 })
 	.then(() => console.log("MongoDB connected"))
 	.catch((err) => console.error("MongoDB connection error:", err));
 // mongoose.set("bufferCommands", false);

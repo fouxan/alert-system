@@ -124,7 +124,7 @@ router.get("/:workspaceId/f/:folderId/alerts", authenticateToken, allAlerts);
 // Datasource routes
 router.post(
   "/:workspaceId/ds",
-  upload.single("caFile"),
+  upload,
   authenticateToken,
   createDatasource,
 );

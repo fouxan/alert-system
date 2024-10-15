@@ -17,6 +17,7 @@ class LCVectorStore {
 
 	async loadSettings() {
 		const store = await VectorStore.findById(this.storeId);
+		console.log("Store", store);
 		if (!store) {
 			throw new Error(`Store not found with storeId: ${this.storeId}`);
 		}

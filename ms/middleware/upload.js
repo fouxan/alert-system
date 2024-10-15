@@ -3,6 +3,17 @@ const path = require("path");
 const fs = require("fs");
 const mongoose = require("mongoose");
 
+const keyFileFilter = (req, file, cb) => {
+  const allowedTypes = ['application/json', 'application/x-pem-file', 'text/plain'];
+  
+  // Check by mimetype or file extension (some .pem files are 'text/plain')
+  if (allowedTypes.includes(file.mimetype) || file.originalname.endsWith('.pem')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only JSON and PEM files are allowed'), false);
+  }
+};
+
 const storage = multer.diskStorage({
 	destination: (req, file, cb) => {
 		const dir = process.env.KEYFILE_DIR;
@@ -30,6 +41,6 @@ const storage = multer.diskStorage({
 	},
 });
 
-const upload = multer({ storage });
+const upload = multer({ keyFileFilter, storage }).single('caFile');
 
 module.exports = upload;

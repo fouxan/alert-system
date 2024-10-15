@@ -28,15 +28,15 @@ services:
       timeout: 5s
       retries: 3
 
-  mongodb:
-    image: mongodb/mongodb-community-server:6.0-ubi8
-    ports:
-      - "27017:27017"
-    volumes:
-      - /Users/fouxan/Personal/Alert System/storage/db:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: fouzan
-      MONGO_INITDB_ROOT_PASSWORD: pw
+  # mongodb:
+  #   image: mongodb/mongodb-community-server:6.0-ubi8
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - /Users/fouxan/Personal/Alert System/storage/db:/data/db
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: fouzan
+  #     MONGO_INITDB_ROOT_PASSWORD: pw
 
   kafka-admin:
     build: ./kafka-admin
@@ -47,7 +47,7 @@ services:
     environment:
       KAFKA_BROKER: "kafka:9092"
       KAFKAJS_NO_PARTITIONER_WARNING: 1
-      MONGODB_URI: "mongodb://fouzan:pw@mongodb"
+      MONGODB_URI: "mongodb+srv://fouzan:30vjpB34k1smoAL9@trial-alert-system.fezsxkj.mongodb.net/?retryWrites=true&w=majority&appName=trial-alert-system"
     healthcheck:
       test: ["CMD", "nc -z localhost 5678 || exit 1"]
       interval: 30s
@@ -82,7 +82,7 @@ services:
         condition: service_healthy
     environment:
       KAFKA_BROKER: "kafka:9092"
-      MONGODB_URI: "mongodb://fouzan:pw@mongodb"
+      MONGODB_URI: "mongodb+srv://fouzan:30vjpB34k1smoAL9@trial-alert-system.fezsxkj.mongodb.net/?retryWrites=true&w=majority&appName=trial-alert-system"
       PORT: 5678
       SECRET_KEY: "/nHQRiJoZM/I0kfArHzxSs7RNrVzQRVlCNrbkyprw6A="
       EMAIL_PASS: "ttjn qlfu jlbh fiwe"
@@ -111,7 +111,7 @@ services:
       - /Users/fouxan/Personal/Alert System/storage/docs:/usr/src/app/storage/docs
     environment:
       PORT: 5001
-      MONGODB_URI: "mongodb://fouzan:pw@mongodb"
+      MONGODB_URI: "mongodb+srv://fouzan:30vjpB34k1smoAL9@trial-alert-system.fezsxkj.mongodb.net/?retryWrites=true&w=majority&appName=trial-alert-system"
       SIGNING_KEY: "jQbCb/GcrXaU9sUrZHXZFCwwkPEoaMUZMIYfSJ2Jb0CZmwRLJ2z4xB8iFuygoJ4hvsfNfMUrVOtBdqKSLhVNsg=="
       SECRET_KEY: "/nHQRiJoZM/I0kfArHzxSs7RNrVzQRVlCNrbkyprw6A="
       DOCS_DIR: "/usr/src/app/storage/docs"
@@ -130,7 +130,7 @@ services:
     environment:
       KAFKA_BROKER: "kafka:9092"
       KAFKAJS_NO_PARTITIONER_WARNING: 1
-      MONGODB_URI: "mongodb://fouzan:pw@mongodb"
+      MONGODB_URI: "mongodb+srv://fouzan:30vjpB34k1smoAL9@trial-alert-system.fezsxkj.mongodb.net/?retryWrites=true&w=majority&appName=trial-alert-system"
     healthcheck:
       test: curl -f http://localhost:5678/health || exit 1
       interval: 10s
@@ -148,7 +148,7 @@ services:
     environment:
       KAFKA_BROKER: "kafka:9092"
       KAFKAJS_NO_PARTITIONER_WARNING: 1
-      MONGODB_URI: "mongodb://fouzan:pw@mongodb"
+      MONGODB_URI: "mongodb+srv://fouzan:30vjpB34k1smoAL9@trial-alert-system.fezsxkj.mongodb.net/?retryWrites=true&w=majority&appName=trial-alert-system"
       ENCRYPTION_KEY: "X4yIwyPnckxQFOPDbSGUQSPxHLn5RHUGnVzZThk4vIw="
       SIGNING_KEY: "jQbCb/GcrXaU9sUrZHXZFCwwkPEoaMUZMIYfSJ2Jb0CZmwRLJ2z4xB8iFuygoJ4hvsfNfMUrVOtBdqKSLhVNsg=="
       KEYFILE_DIR: "/usr/src/app/storage/files"
@@ -169,7 +169,7 @@ services:
     environment:
       KAFKA_BROKER: "kafka:9092"
       KAFKAJS_NO_PARTITIONER_WARNING: 1
-      MONGODB_URI: "mongodb://fouzan:pw@mongodb"
+      MONGODB_URI: "mongodb+srv://fouzan:30vjpB34k1smoAL9@trial-alert-system.fezsxkj.mongodb.net/?retryWrites=true&w=majority&appName=trial-alert-system"
       EMAIL_PASS: "ttjn qlfu jlbh fiwe"
       EMAIL_USER: "q476088@gmail.com"
     healthcheck:
@@ -182,7 +182,7 @@ services:
     build: ./ams
     command: nodemon --watch . --ext js,json --exec "npm start"
     environment:
-      MONGODB_URI: "mongodb://fouzan:pw@mongodb"
+      MONGODB_URI: "mongodb+srv://fouzan:30vjpB34k1smoAL9@trial-alert-system.fezsxkj.mongodb.net/?retryWrites=true&w=majority&appName=trial-alert-system"
       KEYFILE_DIR: "/usr/src/app/storage/files"
       CONFIG_DIR: "/usr/src/app/storage/configs/config-files"
       LOGFILE_DIR: "/usr/src/app/storage/logs"

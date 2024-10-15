@@ -104,30 +104,9 @@ async function testPostgreSQLConnection(dataSourceDetails) {
 
 async function testBigQueryConnection(dataSourceDetails) {
   const connectionObject = {
-    projectId: dataSourceDetails.projectId,
+    projectId: dataSourceDetails.connectionDetails.projectId,
+    keyFileName: path.join(FILE_DIR, dataSourceDetails.connectionDetails.keyFileName),
   };
-  switch (dataSourceDetails.authType) {
-    case "api":
-      connectionObject.apiKey = dataSourceDetails.apiKey;
-      break;
-    case "serviceAccountKey":
-      connectionObject.keyFileName = path.join(
-        FILE_DIR,
-        dataSourceDetails.keyFilePath,
-      );
-      break;
-    case "userAccount":
-      connectionObject.credentials = {
-        client_email: dataSourceDetails.clientEmail,
-        private_key: dataSourceDetails.privateKey,
-      };
-      break;
-    default:
-      throw new Error(
-        "Unsupported Auth Type. Expected either api or service account key but received: ",
-        dataSourceDetails.authType,
-      );
-  }
   const bigQueryClient = new BigQuery(connectionObject);
 
   try {
